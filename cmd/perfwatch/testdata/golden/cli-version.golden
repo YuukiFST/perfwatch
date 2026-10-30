@@ -1,0 +1,5 @@
+$ perfwatch version
+exit: 0
+--- stdout
+perfwatch <version> (<go> <os>/<arch>)
+--- stderr
