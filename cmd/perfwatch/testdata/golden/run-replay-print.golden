@@ -1,0 +1,7 @@
+$ perfwatch run --replay testdata/fixtures/usage-basic.jsonl --print
+exit: 0
+--- stdout
+10:00:01  cpu 62.5%  ram 62.5%  unattributed 10.0%  | chrome.exe x3 30.0%, svchost.exe (netsvcs) 10.0%, System 5.0%, shortlived.exe 5.0%, svchost.exe (LocalService) 2.5%
+10:00:02  cpu 50.0%  ram 50.0%  unattributed 5.0%  | build.exe 20.0%, chrome.exe x2 10.0%, MsMpEng.exe 5.0%, svchost.exe (netsvcs) 5.0%, System 2.5%
+10:00:03  cpu 10.0%  ram 50.0%  unattributed 0.0%  | build.exe 10.0%, chrome.exe x2 2.5%
+--- stderr
