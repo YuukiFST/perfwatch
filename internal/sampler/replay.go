@@ -89,9 +89,12 @@ func CreateRecorder(path string) (*Recorder, error) {
 	return &Recorder{file: f, buf: buf, enc: json.NewEncoder(buf)}, nil
 }
 
-// Write appends one snapshot.
+// Write appends one snapshot and flushes it, so a killed run leaves only whole lines behind.
 func (r *Recorder) Write(snap Snapshot) error {
 	if err := r.enc.Encode(snap); err != nil {
+		return fmt.Errorf("record snapshot: %w", err)
+	}
+	if err := r.buf.Flush(); err != nil {
 		return fmt.Errorf("record snapshot: %w", err)
 	}
 	return nil
