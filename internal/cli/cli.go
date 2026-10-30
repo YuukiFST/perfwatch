@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -79,23 +80,32 @@ func printUsage(w io.Writer) {
 	fmt.Fprint(w, "\nRun \"perfwatch <command> -h\" for the flags of a command.\n")
 }
 
-// newFlagSet returns a flag set that reports parse errors on stderr instead of exiting.
-func newFlagSet(name string, streams Streams) *flag.FlagSet {
+// newFlagSet returns a flag set that reports parse errors instead of exiting.
+func newFlagSet(name string) *flag.FlagSet {
 	fs := flag.NewFlagSet("perfwatch "+name, flag.ContinueOnError)
-	fs.SetOutput(streams.Stderr)
+	fs.Usage = func() {
+		fmt.Fprintf(fs.Output(), "Usage: %s [flags]\n", fs.Name())
+		fs.PrintDefaults()
+	}
 	return fs
 }
 
 // parseFlags parses args and rejects positional arguments, which no command takes.
-func parseFlags(fs *flag.FlagSet, args []string) error {
-	if err := fs.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return err
-		}
+// Help asked for with -h goes to stdout; usage printed for a bad argument goes to stderr.
+func parseFlags(fs *flag.FlagSet, streams Streams, args []string) error {
+	var msg bytes.Buffer
+	fs.SetOutput(&msg)
+	err := fs.Parse(args)
+	switch {
+	case errors.Is(err, flag.ErrHelp):
+		io.Copy(streams.Stdout, &msg)
+		return err
+	case err != nil:
+		io.Copy(streams.Stderr, &msg)
 		return errUsage
-	}
-	if fs.NArg() > 0 {
-		fmt.Fprintf(fs.Output(), "%s: unexpected argument %q\n", fs.Name(), fs.Arg(0))
+	case fs.NArg() > 0:
+		fmt.Fprintf(streams.Stderr, "%s: unexpected argument %q\n", fs.Name(), fs.Arg(0))
+		fs.SetOutput(streams.Stderr)
 		fs.Usage()
 		return errUsage
 	}

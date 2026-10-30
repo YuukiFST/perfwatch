@@ -8,8 +8,8 @@ import (
 )
 
 func runVersion(_ context.Context, streams Streams, args []string) error {
-	fs := newFlagSet("version", streams)
-	if err := parseFlags(fs, args); err != nil {
+	fs := newFlagSet("version")
+	if err := parseFlags(fs, streams, args); err != nil {
 		return err
 	}
 	fmt.Fprintf(streams.Stdout, "perfwatch %s (%s %s/%s)\n", buildVersion(), runtime.Version(), runtime.GOOS, runtime.GOARCH)
