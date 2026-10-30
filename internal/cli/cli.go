@@ -34,6 +34,7 @@ type command struct {
 
 func commands() []command {
 	return []command{
+		{name: "run", summary: "sample CPU and RAM every second until interrupted", run: runRun},
 		{name: "version", summary: "print the perfwatch version", run: runVersion},
 	}
 }

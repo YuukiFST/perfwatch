@@ -7,6 +7,7 @@ perfwatch: unknown command "bogus"
 Usage: perfwatch <command> [flags]
 
 Commands:
+  run        sample CPU and RAM every second until interrupted
   version    print the perfwatch version
 
 Run "perfwatch <command> -h" for the flags of a command.
