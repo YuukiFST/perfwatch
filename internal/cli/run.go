@@ -48,9 +48,12 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 		return err
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
-	coll := collector.New(db)
 	// Ctrl+C cancels ctx to stop waiting for samples; writes still finish, the last partial minute included.
 	writeCtx := context.WithoutCancel(ctx)
+	coll, err := collector.New(writeCtx, db)
+	if err != nil {
+		return err
+	}
 	defer func() { err = errors.Join(err, coll.Close(writeCtx)) }()
 
 	src, err := openSampler(*replayPath)
