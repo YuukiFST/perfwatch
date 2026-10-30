@@ -1,0 +1,57 @@
+system_seconds
+  2026-01-05T10:00:56Z span=1000ms cpu=44.1% ram=50.0% unattributed=2.0% ram_used=8.00GiB
+  2026-01-05T10:00:57Z span=1000ms cpu=45.1% ram=51.0% unattributed=2.0% ram_used=8.16GiB
+  2026-01-05T10:00:58Z span=1000ms cpu=46.1% ram=52.0% unattributed=2.0% ram_used=8.32GiB
+  2026-01-05T10:00:59Z span=1000ms cpu=47.1% ram=53.0% unattributed=2.0% ram_used=8.48GiB
+  2026-01-05T10:01:00Z span=1000ms cpu=48.1% ram=54.0% unattributed=2.0% ram_used=8.64GiB
+  2026-01-05T10:01:01Z span=1000ms cpu=49.1% ram=55.0% unattributed=2.0% ram_used=8.80GiB
+  2026-01-05T10:01:02Z span=1000ms cpu=50.1% ram=56.0% unattributed=2.0% ram_used=8.96GiB
+  2026-01-05T10:01:03Z span=1000ms cpu=51.1% ram=57.0% unattributed=2.0% ram_used=9.12GiB
+  2026-01-05T10:01:04Z span=1000ms cpu=52.1% ram=58.0% unattributed=2.0% ram_used=9.28GiB
+  2026-01-05T10:01:05Z span=1000ms cpu=53.1% ram=59.0% unattributed=2.0% ram_used=9.44GiB
+system_minutes
+  2026-01-05T10:00:00Z samples=4 capacity=8.0s busy=3.65s unattributed=0.16s cpu avg/max/p95=45.60/47.1/47.1% ram avg/max/p95=51.50/53.0/53.0%
+  2026-01-05T10:01:00Z samples=6 capacity=12.0s busy=6.07s unattributed=0.24s cpu avg/max/p95=50.60/53.1/53.1% ram avg/max/p95=56.50/59.0/59.0%
+program_minutes
+  2026-01-05T10:00:00Z p01.exe cpu=0.44s cpu_max=7.0% private_max=240MiB instances=1
+  2026-01-05T10:00:00Z p02.exe cpu=0.30s cpu_max=3.8% private_max=230MiB instances=1
+  2026-01-05T10:00:00Z p03.exe cpu=0.29s cpu_max=3.6% private_max=220MiB instances=1
+  2026-01-05T10:00:00Z p04.exe cpu=0.27s cpu_max=3.4% private_max=210MiB instances=1
+  2026-01-05T10:00:00Z p05.exe cpu=0.26s cpu_max=3.2% private_max=200MiB instances=1
+  2026-01-05T10:00:00Z p06.exe cpu=0.24s cpu_max=3.0% private_max=190MiB instances=1
+  2026-01-05T10:00:00Z p07.exe cpu=0.22s cpu_max=2.8% private_max=180MiB instances=1
+  2026-01-05T10:00:00Z p08.exe cpu=0.21s cpu_max=2.6% private_max=170MiB instances=1
+  2026-01-05T10:00:00Z p09.exe cpu=0.19s cpu_max=2.4% private_max=160MiB instances=1
+  2026-01-05T10:00:00Z p10.exe cpu=0.18s cpu_max=2.2% private_max=150MiB instances=1
+  2026-01-05T10:00:00Z p11.exe cpu=0.16s cpu_max=2.0% private_max=140MiB instances=1
+  2026-01-05T10:00:00Z p12.exe cpu=0.14s cpu_max=1.8% private_max=130MiB instances=1
+  2026-01-05T10:00:00Z p13.exe cpu=0.13s cpu_max=1.6% private_max=120MiB instances=1
+  2026-01-05T10:00:00Z p14.exe cpu=0.11s cpu_max=1.4% private_max=110MiB instances=1
+  2026-01-05T10:00:00Z p15.exe cpu=0.10s cpu_max=1.2% private_max=100MiB instances=1
+  2026-01-05T10:00:00Z p16.exe cpu=0.08s cpu_max=1.0% private_max=90MiB instances=1
+  2026-01-05T10:00:00Z p17.exe cpu=0.06s cpu_max=0.8% private_max=80MiB instances=1
+  2026-01-05T10:00:00Z p18.exe cpu=0.05s cpu_max=0.6% private_max=70MiB instances=1
+  2026-01-05T10:00:00Z p19.exe cpu=0.03s cpu_max=0.4% private_max=60MiB instances=1
+  2026-01-05T10:00:00Z p20.exe cpu=0.02s cpu_max=0.2% private_max=50MiB instances=1
+  2026-01-05T10:00:00Z p22.exe cpu=0.00s cpu_max=0.0% private_max=900MiB instances=1
+  2026-01-05T10:01:00Z p01.exe cpu=1.26s cpu_max=13.0% private_max=240MiB instances=1
+  2026-01-05T10:01:00Z p02.exe cpu=0.46s cpu_max=3.8% private_max=230MiB instances=1
+  2026-01-05T10:01:00Z p03.exe cpu=0.43s cpu_max=3.6% private_max=220MiB instances=1
+  2026-01-05T10:01:00Z p04.exe cpu=0.41s cpu_max=3.4% private_max=210MiB instances=1
+  2026-01-05T10:01:00Z p05.exe cpu=0.38s cpu_max=3.2% private_max=200MiB instances=1
+  2026-01-05T10:01:00Z p06.exe cpu=0.36s cpu_max=3.0% private_max=190MiB instances=1
+  2026-01-05T10:01:00Z p07.exe cpu=0.34s cpu_max=2.8% private_max=180MiB instances=1
+  2026-01-05T10:01:00Z p08.exe cpu=0.31s cpu_max=2.6% private_max=170MiB instances=1
+  2026-01-05T10:01:00Z p09.exe cpu=0.29s cpu_max=2.4% private_max=160MiB instances=1
+  2026-01-05T10:01:00Z p10.exe cpu=0.26s cpu_max=2.2% private_max=150MiB instances=1
+  2026-01-05T10:01:00Z p11.exe cpu=0.24s cpu_max=2.0% private_max=140MiB instances=1
+  2026-01-05T10:01:00Z p12.exe cpu=0.22s cpu_max=1.8% private_max=130MiB instances=1
+  2026-01-05T10:01:00Z p13.exe cpu=0.19s cpu_max=1.6% private_max=120MiB instances=1
+  2026-01-05T10:01:00Z p14.exe cpu=0.17s cpu_max=1.4% private_max=110MiB instances=1
+  2026-01-05T10:01:00Z p15.exe cpu=0.14s cpu_max=1.2% private_max=100MiB instances=1
+  2026-01-05T10:01:00Z p16.exe cpu=0.12s cpu_max=1.0% private_max=90MiB instances=1
+  2026-01-05T10:01:00Z p17.exe cpu=0.10s cpu_max=0.8% private_max=80MiB instances=1
+  2026-01-05T10:01:00Z p18.exe cpu=0.07s cpu_max=0.6% private_max=70MiB instances=1
+  2026-01-05T10:01:00Z p19.exe cpu=0.05s cpu_max=0.4% private_max=60MiB instances=1
+  2026-01-05T10:01:00Z p20.exe cpu=0.02s cpu_max=0.2% private_max=50MiB instances=1
+  2026-01-05T10:01:00Z p22.exe cpu=0.00s cpu_max=0.0% private_max=900MiB instances=1
