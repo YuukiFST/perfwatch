@@ -1,0 +1,27 @@
+name: regression-guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  regression-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Frozen regression tests unchanged
+        env:
+          APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'regression-change-approved') }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          changed=$(git diff --name-status --diff-filter=DMR "$BASE...$HEAD" -- ':(icase)*regression*')
+          if [ -n "$changed" ] && [ "$APPROVED" != true ]; then
+            printf 'Frozen regression tests changed; the user adds the regression-change-approved label to accept:\n%s\n' "$changed"
+            exit 1
+          fi
