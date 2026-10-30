@@ -9,6 +9,23 @@ The sampler sits behind an interface, so a Linux backend can be added later with
 
 Under construction: the commands land one pull request at a time.
 
+## Commands
+
+| Command | What it does |
+|---------|--------------|
+| `perfwatch version` | Print the version. |
+
+## Development
+
+```sh
+go vet ./...
+go test ./...                      # end-to-end: builds perfwatch and diffs its output against testdata/golden
+go test ./cmd/perfwatch -update    # rewrite the golden files after an intended output change
+go build ./cmd/perfwatch
+```
+
+Read the diff of every rewritten golden file before committing it: it is the behavior change.
+
 ## License
 
 [MIT](LICENSE)
