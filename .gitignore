@@ -1,0 +1,27 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries and coverage
+*.test
+*.out
+coverage.*
+
+# Workspace files
+go.work
+go.work.sum
+
+# Local data and logs from manual runs
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
