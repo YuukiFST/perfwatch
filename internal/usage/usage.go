@@ -50,7 +50,8 @@ type Interval struct {
 	CapacityTicks uint64
 	BusyTicks     uint64
 	// UnattributedTicks is busy time no sampled process accounts for: interrupts, DPCs,
-	// and processes that started and exited between the two snapshots.
+	// processes that started and exited between the two snapshots, and the last partial
+	// interval of every process that exited before cur.
 	UnattributedTicks   uint64
 	CPUPercent          float64
 	UnattributedPercent float64

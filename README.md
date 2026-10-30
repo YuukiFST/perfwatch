@@ -24,7 +24,7 @@ Under construction: the commands land one pull request at a time.
 
 - Per-process CPU is a share of the whole machine: 100% means every logical CPU was busy.
 - Instances of one program are summed under its name, with the instance count after `x`; `svchost.exe` is split by its `-k` service group.
-- `unattributed` is busy CPU that no sampled process accounts for: interrupt and DPC time, and processes that started and exited between two samples.
+- `unattributed` is busy CPU that no sampled process accounts for: interrupt and DPC time, processes that started and exited between two samples, and the last partial second of every process that exited.
 
 ## Development
 
