@@ -19,9 +19,15 @@ type Program struct {
 	ServiceGroup string
 }
 
-type programKey struct {
-	name         string // lower case
-	serviceGroup string
+// ProgramKey is what makes two instances the same Program.
+type ProgramKey struct {
+	Name         string // lower case
+	ServiceGroup string
+}
+
+// Key returns the identity rankings sum p's instances under.
+func (p Program) Key() ProgramKey {
+	return ProgramKey{Name: strings.ToLower(p.Name), ServiceGroup: p.ServiceGroup}
 }
 
 // Label is the name a ranking shows: the image name, plus the service group of a svchost.exe.
@@ -106,7 +112,7 @@ func sumPrograms(prev, cur []sampler.Process) (programs []ProgramUsage, attribut
 	for _, p := range prev {
 		before[instance{p.PID, p.CreateTime}] = p.CPUTicks
 	}
-	index := map[programKey]int{}
+	index := map[ProgramKey]int{}
 	for _, p := range cur {
 		delta := p.CPUTicks
 		if start, seen := before[instance{p.PID, p.CreateTime}]; seen {
@@ -116,12 +122,12 @@ func sumPrograms(prev, cur []sampler.Process) (programs []ProgramUsage, attribut
 			}
 		}
 		attributed += delta
-		key := programKey{name: strings.ToLower(p.Name), serviceGroup: p.ServiceGroup}
-		i, ok := index[key]
+		program := Program{Name: p.Name, Path: p.Path, ServiceGroup: p.ServiceGroup}
+		i, ok := index[program.Key()]
 		if !ok {
 			i = len(programs)
-			index[key] = i
-			programs = append(programs, ProgramUsage{Program: Program{Name: p.Name, Path: p.Path, ServiceGroup: p.ServiceGroup}})
+			index[program.Key()] = i
+			programs = append(programs, ProgramUsage{Program: program})
 		}
 		if programs[i].Path == "" {
 			programs[i].Path = p.Path
