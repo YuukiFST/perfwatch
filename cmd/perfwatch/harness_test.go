@@ -44,10 +44,12 @@ type cliResult struct {
 }
 
 // runPerfwatch runs the built binary with args and extra environment entries (KEY=value).
+// PERFWATCH_DATA_DIR defaults to a fresh temp dir, so no test touches the user's real data;
+// an entry in env overrides it.
 func runPerfwatch(t *testing.T, env []string, args ...string) cliResult {
 	t.Helper()
 	cmd := exec.Command(perfwatchBin, args...)
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(append(os.Environ(), "PERFWATCH_DATA_DIR="+t.TempDir()), env...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	err := cmd.Run()

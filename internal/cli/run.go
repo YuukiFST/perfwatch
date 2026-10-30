@@ -32,6 +32,10 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 		return err
 	}
 
+	if *replayPath != "" && os.Getenv(dataDirEnv) == "" {
+		fmt.Fprintf(streams.Stderr, "perfwatch run: --replay stores the replayed samples; set %s to keep them out of the real history\n", dataDirEnv)
+		return errUsage
+	}
 	dir, err := dataDir()
 	if err != nil {
 		return err
