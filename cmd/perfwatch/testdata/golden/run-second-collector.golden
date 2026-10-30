@@ -1,0 +1,5 @@
+$ perfwatch run --replay testdata/fixtures/usage-basic.jsonl
+exit: 1
+--- stdout
+--- stderr
+perfwatch: another perfwatch collector is already writing to <data dir>

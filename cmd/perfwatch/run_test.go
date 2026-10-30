@@ -3,7 +3,9 @@ package main_test
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -107,6 +109,63 @@ func TestRunRecordsLiveSnapshots(t *testing.T) {
 		if !strings.Contains(line, "  cpu ") || !strings.Contains(line, "  unattributed ") {
 			t.Errorf("replayed line lacks the usage fields: %q", line)
 		}
+	}
+}
+
+// TestRunAllowsOneCollectorPerDataDir starts a live collector, checks that a second run on the
+// same data directory refuses to start, then kills the first one hard: its stored seconds must
+// all be in their minute rollups, and the next run must start and close the minute it left open.
+func TestRunAllowsOneCollectorPerDataDir(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("live sampling is implemented on Windows only")
+	}
+	dataDir := t.TempDir()
+	env := []string{"PERFWATCH_DATA_DIR=" + dataDir}
+	first := exec.Command(perfwatchBin, "run", "--print")
+	first.Env = append(os.Environ(), env...)
+	stdout, err := first.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Start(); err != nil {
+		t.Fatalf("start the first collector: %v", err)
+	}
+	t.Cleanup(func() { first.Process.Kill(); first.Wait() })
+	// The first --print line comes after the first sample is stored, so the lock is held by then.
+	lines := bufio.NewScanner(stdout)
+	if !lines.Scan() {
+		t.Fatalf("the first collector printed no sample: %v", lines.Err())
+	}
+	go io.Copy(io.Discard, stdout)
+
+	fixture := "testdata/fixtures/usage-basic.jsonl"
+	second := runPerfwatch(t, env, "run", "--replay", fixture)
+	assertGolden(t, "run-second-collector", strings.ReplaceAll(second.transcript(), dataDir, "<data dir>"))
+
+	if err := first.Process.Kill(); err != nil {
+		t.Fatalf("kill the first collector: %v", err)
+	}
+	first.Wait()
+	db := openStore(t, filepath.Join(dataDir, "perfwatch.db"))
+	var stored, rolledUp int
+	err = db.QueryRow(`SELECT (SELECT count(*) FROM system_seconds),
+		(SELECT coalesce(sum(samples), 0) FROM system_minutes)`).Scan(&stored, &rolledUp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored == 0 || rolledUp != stored {
+		t.Errorf("after a hard kill: %d seconds stored, %d of them in minute rollups; want all of at least one", stored, rolledUp)
+	}
+
+	if res := runPerfwatch(t, env, "run", "--replay", fixture); res.exitCode != 0 {
+		t.Fatalf("run after the hard kill failed:\n%s", res.transcript())
+	}
+	var open int
+	if err := db.QueryRow("SELECT count(*) FROM system_minutes WHERE cpu_p95 IS NULL OR ram_p95 IS NULL").Scan(&open); err != nil {
+		t.Fatal(err)
+	}
+	if open != 0 {
+		t.Errorf("%d minutes still open after the next run started, want 0", open)
 	}
 }
 
