@@ -26,6 +26,19 @@ Under construction: the commands land one pull request at a time.
 - Instances of one program are summed under its name, with the instance count after `x`; `svchost.exe` is split by its `-k` service group.
 - `unattributed` is busy CPU that no sampled process accounts for: interrupt and DPC time, processes that started and exited between two samples, and the last partial second of every process that exited.
 
+## Data
+
+`run` keeps everything in SQLite (WAL mode) at `%LOCALAPPDATA%\perfwatch\perfwatch.db`; set `PERFWATCH_DATA_DIR` to use another directory.
+
+| What | Granularity | Kept |
+|------|-------------|------|
+| Machine CPU, RAM and unattributed CPU | 1 s | 7 days |
+| Machine rollups: average, maximum, p95 | 1 min | 1 year |
+| Per-program CPU-seconds, max CPU, max private RAM, instances: the top 20 by CPU plus the top 20 by RAM | 1 min | 90 days |
+
+Retention runs when `run` starts and once an hour after.
+An interval longer than 5 s (the machine slept or the collector was stopped) is not stored, so it shows as a gap.
+
 ## Development
 
 ```sh
