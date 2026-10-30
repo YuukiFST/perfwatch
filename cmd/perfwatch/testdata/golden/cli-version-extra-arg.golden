@@ -1,0 +1,6 @@
+$ perfwatch version extra
+exit: 2
+--- stdout
+--- stderr
+perfwatch version: unexpected argument "extra"
+Usage: perfwatch version [flags]
