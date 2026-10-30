@@ -31,6 +31,7 @@ type recordedSnapshot struct {
 	} `json:"memory"`
 	Processes []struct {
 		PID          uint32 `json:"pid"`
+		CreateTime   int64  `json:"create_time"`
 		Name         string `json:"name"`
 		Path         string `json:"path"`
 		ServiceGroup string `json:"service_group"`
@@ -64,6 +65,16 @@ func TestRunRecordsLiveSnapshots(t *testing.T) {
 		}
 	}
 
+	// A svchost.exe started during the run may not have reported its service yet; every one
+	// that was already running at the first snapshot must carry its group.
+	type instance struct {
+		pid        uint32
+		createTime int64
+	}
+	runningAtStart := map[instance]bool{}
+	for _, p := range snaps[0].Processes {
+		runningAtStart[instance{p.PID, p.CreateTime}] = true
+	}
 	last := snaps[len(snaps)-1]
 	foundSelf, svchosts, grouped := false, 0, 0
 	for _, p := range last.Processes {
@@ -73,7 +84,7 @@ func TestRunRecordsLiveSnapshots(t *testing.T) {
 				t.Errorf("the collector's own entry lacks CPU, private bytes or name: %+v", p)
 			}
 		}
-		if strings.EqualFold(p.Name, "svchost.exe") {
+		if strings.EqualFold(p.Name, "svchost.exe") && runningAtStart[instance{p.PID, p.CreateTime}] {
 			svchosts++
 			if p.ServiceGroup != "" {
 				grouped++
