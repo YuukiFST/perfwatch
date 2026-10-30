@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/YuukiFST/perfwatch/internal/collector"
+	"github.com/YuukiFST/perfwatch/internal/lock"
 	"github.com/YuukiFST/perfwatch/internal/sampler"
 	"github.com/YuukiFST/perfwatch/internal/store"
 	"github.com/YuukiFST/perfwatch/internal/usage"
@@ -21,6 +22,9 @@ const sampleInterval = time.Second
 
 // printedPrograms is how many programs a --print line names.
 const printedPrograms = 5
+
+// lockFileName is the file in the data directory a running collector holds exclusively.
+const lockFileName = "collector.lock"
 
 func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 	fs := newFlagSet("run")
@@ -43,6 +47,14 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create data directory: %w", err)
 	}
+	held, err := lock.Acquire(filepath.Join(dir, lockFileName))
+	if errors.Is(err, lock.ErrHeld) {
+		return fmt.Errorf("another perfwatch collector is already writing to %s", dir)
+	}
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, held.Release()) }()
 	db, err := store.Open(ctx, filepath.Join(dir, store.FileName))
 	if err != nil {
 		return err
