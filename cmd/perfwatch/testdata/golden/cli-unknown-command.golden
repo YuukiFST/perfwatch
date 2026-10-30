@@ -1,0 +1,12 @@
+$ perfwatch bogus
+exit: 2
+--- stdout
+--- stderr
+perfwatch: unknown command "bogus"
+
+Usage: perfwatch <command> [flags]
+
+Commands:
+  version    print the perfwatch version
+
+Run "perfwatch <command> -h" for the flags of a command.

@@ -1,0 +1,10 @@
+$ perfwatch help
+exit: 0
+--- stdout
+Usage: perfwatch <command> [flags]
+
+Commands:
+  version    print the perfwatch version
+
+Run "perfwatch <command> -h" for the flags of a command.
+--- stderr

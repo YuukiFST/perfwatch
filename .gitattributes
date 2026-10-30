@@ -1,0 +1,2 @@
+# Golden files and sources stay LF on Windows checkouts, so byte-for-byte diffs and gofmt agree.
+* text=auto eol=lf
