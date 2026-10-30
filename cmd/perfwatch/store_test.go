@@ -12,7 +12,8 @@ import (
 )
 
 // TestStoreRollupsAndRetention replays a machine with 22 programs across a minute boundary,
-// then jumps 8, 100 and 400 days ahead so each retention window expires in turn.
+// restarts the collector within a minute, then jumps 8, 100 and 400 days ahead so each
+// retention window expires in turn; replaying data already stored must change nothing.
 func TestStoreRollupsAndRetention(t *testing.T) {
 	dataDir := t.TempDir()
 	env := []string{"PERFWATCH_DATA_DIR=" + dataDir}
@@ -38,19 +39,34 @@ func TestStoreRollupsAndRetention(t *testing.T) {
 	for _, s := range shares {
 		busyBase += s
 	}
-	for k := range 10 {
+	// Second k: p01 and the machine k points busier, RAM at 50+k %.
+	step := func(k int) {
 		m.ramPct = 50 + float64(k)
 		shares["p01.exe"] = 4 + float64(k)
 		m.step(time.Second, busyBase+float64(k), shares)
 	}
+	for k := range 10 {
+		step(k)
+	}
 	day0 := m.write(t, "day0")
+	// The collector stops at 10:01:05 and starts again at once, within minute 10:01.
+	for k := 10; k < 15; k++ {
+		step(k)
+	}
+	restart := m.write(t, "day0-restart")
+	shares["p01.exe"] = 4
+	// p22 exits, so nothing references it once day 0's program minutes expire.
+	m.exit(1022)
 
 	db := filepath.Join(dataDir, "perfwatch.db")
 	replay(day0)
-	assertGolden(t, "store-rollups", dumpRollups(t, db))
+	rollups := dumpRollups(t, db, "after day 0")
+	replay(restart)
+	rollups += dumpRollups(t, db, "after a restart within minute 10:01")
+	assertGolden(t, "store-rollups", rollups)
 
 	var states strings.Builder
-	states.WriteString(storeState(t, db, "after day 0"))
+	states.WriteString(storeState(t, db, "after day 0 and the restart"))
 	replay(day0)
 	states.WriteString(storeState(t, db, "after replaying day 0 again"))
 	for _, days := range []int{8, 100, 400} {
@@ -59,6 +75,10 @@ func TestStoreRollupsAndRetention(t *testing.T) {
 		m.step(time.Second, busyBase, shares)
 		replay(m.write(t, fmt.Sprintf("day%d", days)))
 		states.WriteString(storeState(t, db, fmt.Sprintf("after day %d", days)))
+		if days == 8 {
+			replay(day0)
+			states.WriteString(storeState(t, db, "after replaying day 0 once its seconds expired"))
+		}
 	}
 	assertGolden(t, "store-retention", states.String())
 }
@@ -78,9 +98,10 @@ func utc(ms int64) string {
 }
 
 // dumpRollups renders every stored sample and rollup as one labeled line each.
-func dumpRollups(t *testing.T, path string) string {
+func dumpRollups(t *testing.T, path, label string) string {
 	db := openStore(t, path)
 	var b strings.Builder
+	fmt.Fprintf(&b, "== %s\n", label)
 	b.WriteString("system_seconds\n")
 	eachRow(t, db, `SELECT ts, span_ms, cpu_pct, ram_pct, unattributed_pct, ram_used_bytes FROM system_seconds ORDER BY ts`,
 		func(scan func(...any)) {
@@ -91,14 +112,16 @@ func dumpRollups(t *testing.T, path string) string {
 				utc(ts), span, cpu, ram, unattributed, float64(ramUsed)/float64(gib))
 		})
 	b.WriteString("system_minutes\n")
-	eachRow(t, db, `SELECT minute, samples, capacity_ticks, busy_ticks, unattributed_ticks,
-		cpu_avg, cpu_max, cpu_p95, ram_avg, ram_max, ram_p95 FROM system_minutes ORDER BY minute`,
+	eachRow(t, db, `SELECT minute, last_ts, samples, capacity_ticks, busy_ticks, unattributed_ticks,
+		cpu_sum / samples, cpu_max, cpu_p95, ram_sum / samples, ram_max, ram_p95 FROM system_minutes ORDER BY minute`,
 		func(scan func(...any)) {
-			var minute, samples, capacity, busy, unattributed int64
-			var cpuAvg, cpuMax, cpuP95, ramAvg, ramMax, ramP95 float64
-			scan(&minute, &samples, &capacity, &busy, &unattributed, &cpuAvg, &cpuMax, &cpuP95, &ramAvg, &ramMax, &ramP95)
-			fmt.Fprintf(&b, "  %s samples=%d capacity=%.1fs busy=%.2fs unattributed=%.2fs cpu avg/max/p95=%.2f/%.1f/%.1f%% ram avg/max/p95=%.2f/%.1f/%.1f%%\n",
-				utc(minute), samples, seconds(capacity), seconds(busy), seconds(unattributed), cpuAvg, cpuMax, cpuP95, ramAvg, ramMax, ramP95)
+			var minute, last, samples, capacity, busy, unattributed int64
+			var cpuAvg, cpuMax, ramAvg, ramMax float64
+			var cpuP95, ramP95 sql.NullFloat64
+			scan(&minute, &last, &samples, &capacity, &busy, &unattributed, &cpuAvg, &cpuMax, &cpuP95, &ramAvg, &ramMax, &ramP95)
+			fmt.Fprintf(&b, "  %s last=%s samples=%d capacity=%.1fs busy=%.2fs unattributed=%.2fs cpu avg/max/p95=%.2f/%.1f/%s%% ram avg/max/p95=%.2f/%.1f/%s%%\n",
+				utc(minute), utc(last), samples, seconds(capacity), seconds(busy), seconds(unattributed),
+				cpuAvg, cpuMax, percent(cpuP95), ramAvg, ramMax, percent(ramP95))
 		})
 	b.WriteString("program_minutes\n")
 	eachRow(t, db, `SELECT pm.minute, p.name, p.service_group, pm.cpu_ticks, pm.cpu_max_pct, pm.private_max_bytes, pm.instances_max
@@ -114,7 +137,15 @@ func dumpRollups(t *testing.T, path string) string {
 	return b.String()
 }
 
-// storeState renders each table's row count and time range.
+// percent renders a p95 column, which stays NULL while its minute is open.
+func percent(v sql.NullFloat64) string {
+	if !v.Valid {
+		return "open"
+	}
+	return fmt.Sprintf("%.1f", v.Float64)
+}
+
+// storeState renders each table's row count and time range, and the rollup totals.
 func storeState(t *testing.T, path, label string) string {
 	db := openStore(t, path)
 	var b strings.Builder
@@ -139,6 +170,15 @@ func storeState(t *testing.T, path, label string) string {
 		t.Fatalf("count programs: %v", err)
 	}
 	fmt.Fprintf(&b, "  %-15s %3d rows\n", "programs", programs)
+	// Row counts and time ranges alone would hide a replay counted twice.
+	var samples, busy, programTicks int64
+	err := db.QueryRow(`SELECT (SELECT coalesce(sum(samples), 0) FROM system_minutes),
+		(SELECT coalesce(sum(busy_ticks), 0) FROM system_minutes),
+		(SELECT coalesce(sum(cpu_ticks), 0) FROM program_minutes)`).Scan(&samples, &busy, &programTicks)
+	if err != nil {
+		t.Fatalf("sum rollups: %v", err)
+	}
+	fmt.Fprintf(&b, "  %-15s samples=%d busy=%.2fs program_cpu=%.2fs\n", "totals", samples, seconds(busy), seconds(programTicks))
 	return b.String()
 }
 

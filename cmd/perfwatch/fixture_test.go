@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 )
@@ -81,6 +82,11 @@ func (m *machine) step(d time.Duration, busyPct float64, shares map[string]float
 	m.snapshot()
 }
 
+// exit ends the process with pid; it is gone from the next snapshot on.
+func (m *machine) exit(pid uint32) {
+	m.procs = slices.DeleteFunc(m.procs, func(p *fixtureProcess) bool { return p.PID == pid })
+}
+
 // jump moves the clock without a snapshot in between, as when the collector was off.
 func (m *machine) jump(d time.Duration) {
 	m.now = m.now.Add(d)
@@ -100,7 +106,8 @@ func (m *machine) snapshot() {
 }
 
 // write saves the snapshots taken since the last write as a JSON Lines fixture in a test
-// temp dir and returns its path; the next fixture continues the same machine.
+// temp dir and returns its path. The next fixture starts from this one's last snapshot, as a
+// collector restarted at once would, so no interval is lost between the two.
 func (m *machine) write(t *testing.T, name string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name+".jsonl")
@@ -115,6 +122,6 @@ func (m *machine) write(t *testing.T, name string) string {
 			t.Fatalf("write fixture: %v", err)
 		}
 	}
-	m.snaps = nil
+	m.snaps = m.snaps[len(m.snaps)-1:]
 	return path
 }

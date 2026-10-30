@@ -39,6 +39,9 @@ Under construction: the commands land one pull request at a time.
 Retention runs when `run` starts and once an hour after.
 An interval longer than 5 s (the machine slept or the collector was stopped) is not stored, so it shows as a gap.
 
+- Machine rollups are written with every sample, so killing `run` loses none of them; the per-program breakdown of the minute in progress is lost.
+- Replaying samples already stored changes nothing, even after their 1 s rows have expired.
+
 ## Development
 
 ```sh
