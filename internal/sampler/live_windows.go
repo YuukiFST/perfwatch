@@ -62,19 +62,25 @@ func (l *Live) Next(ctx context.Context) (Snapshot, error) {
 		case <-l.ticker.C:
 		}
 	}
-	procs, err := l.readProcesses()
-	if err != nil {
+	// Process and machine counters are subtracted from each other later, so read them back to
+	// back and resolve identities (handles, service enumeration) only afterwards.
+	if err := l.querySystemProcesses(); err != nil {
 		return Snapshot{}, err
 	}
 	cpu, err := readCPUTimes()
 	if err != nil {
 		return Snapshot{}, err
 	}
+	now := time.Now()
 	mem, err := readMemory()
 	if err != nil {
 		return Snapshot{}, err
 	}
-	return Snapshot{Time: time.Now(), CPU: cpu, Memory: mem, Processes: procs}, nil
+	procs, err := l.parseProcesses(now)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return Snapshot{Time: now, CPU: cpu, Memory: mem, Processes: procs}, nil
 }
 
 // Close stops the ticker.
@@ -85,13 +91,10 @@ func (l *Live) Close() error {
 	return nil
 }
 
-// readProcesses walks the SYSTEM_PROCESS_INFORMATION list; the field layout is
+// parseProcesses walks the SYSTEM_PROCESS_INFORMATION list in l.buf; the field layout is
 // windows.SYSTEM_PROCESS_INFORMATION, which names the members Microsoft's winternl.h keeps as Reserved1.
-func (l *Live) readProcesses() ([]Process, error) {
-	if err := l.querySystemProcesses(); err != nil {
-		return nil, err
-	}
-	l.identities.beginPass()
+func (l *Live) parseProcesses(now time.Time) ([]Process, error) {
+	l.identities.beginPass(now)
 	procs := make([]Process, 0, l.identities.lastCount)
 	for off := 0; ; {
 		if off+processInfoSize > len(l.buf) {
