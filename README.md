@@ -13,7 +13,18 @@ Under construction: the commands land one pull request at a time.
 
 | Command | What it does |
 |---------|--------------|
+| `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl]` | Sample CPU and RAM every second until interrupted. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system. |
 | `perfwatch version` | Print the version. |
+
+`run --print` reads like this:
+
+```
+12:28:13  cpu 47.7%  ram 81.7%  unattributed 1.6%  | vmmem 37.9%, com.docker.backend.exe x2 3.1%, docker.exe x2 1.2%, brave.exe x18 0.8%, conhost.exe x19 0.8%
+```
+
+- Per-process CPU is a share of the whole machine: 100% means every logical CPU was busy.
+- Instances of one program are summed under its name, with the instance count after `x`; `svchost.exe` is split by its `-k` service group.
+- `unattributed` is busy CPU that no sampled process accounts for: interrupt and DPC time, and processes that started and exited between two samples.
 
 ## Development
 
