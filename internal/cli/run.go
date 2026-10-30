@@ -5,10 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/YuukiFST/perfwatch/internal/collector"
 	"github.com/YuukiFST/perfwatch/internal/sampler"
+	"github.com/YuukiFST/perfwatch/internal/store"
 	"github.com/YuukiFST/perfwatch/internal/usage"
 )
 
@@ -27,6 +31,23 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 	if err := parseFlags(fs, streams, args); err != nil {
 		return err
 	}
+
+	dir, err := dataDir()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create data directory: %w", err)
+	}
+	db, err := store.Open(ctx, filepath.Join(dir, store.FileName))
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, db.Close()) }()
+	coll := collector.New(db)
+	// Ctrl+C cancels ctx to stop waiting for samples; writes still finish, the last partial minute included.
+	writeCtx := context.WithoutCancel(ctx)
+	defer func() { err = errors.Join(err, coll.Close(writeCtx)) }()
 
 	src, err := openSampler(*replayPath)
 	if err != nil {
@@ -59,9 +80,14 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 				return err
 			}
 		}
-		if !prev.Time.IsZero() && *printUsage {
+		if !prev.Time.IsZero() {
 			if iv, ok := usage.Between(prev, snap); ok {
-				printInterval(streams.Stdout, iv)
+				if err := coll.Record(writeCtx, iv); err != nil {
+					return err
+				}
+				if *printUsage {
+					printInterval(streams.Stdout, iv)
+				}
 			}
 		}
 		prev = snap
