@@ -13,7 +13,7 @@ Under construction: the commands land one pull request at a time.
 
 | Command | What it does |
 |---------|--------------|
-| `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl]` | Sample CPU and RAM every second until interrupted. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system. |
+| `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl]` | Sample CPU and RAM every second until interrupted. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system, into the directory `PERFWATCH_DATA_DIR` names. |
 | `perfwatch version` | Print the version. |
 
 `run --print` reads like this:
