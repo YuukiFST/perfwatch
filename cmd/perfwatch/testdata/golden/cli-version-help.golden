@@ -1,0 +1,5 @@
+$ perfwatch version -h
+exit: 0
+--- stdout
+Usage: perfwatch version [flags]
+--- stderr
