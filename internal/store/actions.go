@@ -130,13 +130,14 @@ ORDER BY 8, tool_use_id`, to.UnixMilli(), OpenActionWindow.Milliseconds(), from.
 }
 
 // actionUsage reads the machine samples that overlap a's window: a sample covers the span
-// (ts - span_ms, ts].
+// (ts - span_ms, ts]. No span exceeds MaxSecondSpan, so ts < end + MaxSecondSpan bounds the
+// primary-key range, which ts - span_ms alone cannot.
 func (db *DB) actionUsage(ctx context.Context, a *AgentAction) error {
-	start, end := a.Start.UnixMilli(), a.End.UnixMilli()
+	start, end := a.Start.UnixMilli(), max(a.End.UnixMilli(), a.Start.UnixMilli()+1)
 	var ramMax sql.NullInt64
 	err := db.sql.QueryRowContext(ctx, `
 SELECT count(*), coalesce(avg(cpu_pct), 0), coalesce(max(cpu_pct), 0), coalesce(max(ram_pct), 0), max(ram_used_bytes)
-FROM system_seconds WHERE ts > ? AND ts - span_ms < ?`, start, max(end, start+1)).Scan(
+FROM system_seconds WHERE ts > ? AND ts < ? AND ts - span_ms < ?`, start, end+MaxSecondSpan.Milliseconds(), end).Scan(
 		&a.Samples, &a.CPUAvgPercent, &a.CPUMaxPercent, &a.RAMMaxPercent, &ramMax)
 	if err != nil {
 		return fmt.Errorf("read agent action usage: %w", err)

@@ -19,6 +19,10 @@ const (
 	ProgramMinutesRetention = 90 * 24 * time.Hour
 )
 
+// MaxSecondSpan is the longest Span a stored Second has; readers bound their scans of
+// system_seconds by it.
+const MaxSecondSpan = 5 * time.Second
+
 // Second is one machine sample: the interval ending at End. It belongs to the minute End
 // falls in.
 type Second struct {
