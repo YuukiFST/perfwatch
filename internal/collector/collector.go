@@ -18,7 +18,7 @@ import (
 const (
 	// MaxIntervalSpan is the longest interval kept as a sample. A longer one means the machine
 	// slept or the collector stalled; its average says nothing about any moment, so it is a gap.
-	MaxIntervalSpan = 5 * time.Second
+	MaxIntervalSpan = store.MaxSecondSpan
 	// PruneInterval is how often retention runs, in sample time.
 	PruneInterval = time.Hour
 	// TopPrograms is how many programs a minute keeps by CPU, and again by private RAM.
