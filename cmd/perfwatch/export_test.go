@@ -27,6 +27,7 @@ func TestExport(t *testing.T) {
 	for _, args := range [][]string{
 		{"export", "--html", reportPath},
 		{"export"},
+		{"export", "--html", "report.html", "--since", "366d"}, // past the minute history
 	} {
 		res := runPerfwatch(t, env, args...)
 		res.stdout = regexp.MustCompile(`\d+ KiB`).ReplaceAllString(res.stdout, "<size> KiB")
@@ -35,6 +36,14 @@ func TestExport(t *testing.T) {
 	// The reason comes from the OS in its own language, so only its start is checked.
 	if res := runPerfwatch(t, env, "export", "--html", filepath.Join(outDir, "missing", "report.html")); res.exitCode != 1 || !strings.HasPrefix(res.stderr, "perfwatch: write report: ") {
 		t.Errorf("export into a missing directory should fail to write:\n%s", res.transcript())
+	}
+
+	// A report aimed at the database it reads must leave the database whole.
+	if res := runPerfwatch(t, env, "export", "--html", filepath.Join(dataDir, "perfwatch.db")); res.exitCode != 1 || !strings.Contains(res.stderr, "outside the data directory") {
+		t.Errorf("export over the database should be refused:\n%s", res.transcript())
+	}
+	if res := runPerfwatch(t, env, "peaks"); res.exitCode != 0 {
+		t.Errorf("peaks after the refused export failed:\n%s", res.transcript())
 	}
 
 	page, err := os.ReadFile(reportPath)
@@ -56,6 +65,11 @@ func TestExport(t *testing.T) {
 	m := regexp.MustCompile(`<script>window\.PERFWATCH_REPORT = (.*);</script>`).FindSubmatch(page)
 	if m == nil {
 		t.Fatal("the report carries no data")
+	}
+	// The page script reads the data when it starts, so the data must come first.
+	data, app := bytes.Index(page, []byte("<script>window.PERFWATCH_REPORT")), bytes.Index(page, []byte("const report = window.PERFWATCH_REPORT"))
+	if app < 0 || data > app {
+		t.Errorf("the data script should precede the page script (data at %d, page script at %d)", data, app)
 	}
 	var report struct {
 		Generated    string                     `json:"generated"`

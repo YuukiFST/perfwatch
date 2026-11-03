@@ -11,6 +11,8 @@ const pctFormat = new Intl.NumberFormat("pt-BR", { style: "percent", minimumFrac
 const oneDecimal = new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const integer = new Intl.NumberFormat("pt-BR");
 const dateTime = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" });
+// The range and the report's date name their zone: a report may be opened in another one.
+const dateTimeZone = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "long" });
 const timeOnly = new Intl.DateTimeFormat("pt-BR", { timeStyle: "medium" });
 const axisTime = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" });
 const axisSeconds = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -103,8 +105,8 @@ async function load(from, to, onLoaded) {
     state.from = new Date(timeline.from);
     state.to = new Date(timeline.to);
     $("zoom-out").disabled = state.zoomed.length === 0;
-    $("range-label").textContent = `${when(state.from)} a ${when(state.to)}` +
-      (report ? ` · relatório gerado em ${when(new Date(report.generated))}` : "");
+    $("range-label").textContent = `${when(state.from)} a ${dateTimeZone.format(state.to)}` +
+      (report ? ` · relatório gerado em ${dateTimeZone.format(new Date(report.generated))}; horários no fuso deste computador` : "");
     renderTimeline(timeline);
     renderEpisodeList(timeline.episodes);
     await loadRanking();
