@@ -26,6 +26,8 @@ type detector struct {
 	ring        []store.EpisodeSample
 	hot         int // consecutive hot samples outside an episode
 	streakStart time.Time
+	streakCPU   bool // some sample of the streak was hot on CPU
+	streakRAM   bool // some sample of the streak was hot on RAM
 
 	active   bool
 	id       int64
@@ -51,11 +53,13 @@ func (d *detector) observe(ctx context.Context, iv usage.Interval) error {
 		d.trimRing(iv.End)
 		return d.extend(ctx, iv, s)
 	}
-	hot := iv.CPUPercent >= d.cfg.CPUStartPercent || iv.RAMPercent >= d.cfg.RAMStartPercent
-	if !hot {
+	cpuHot, ramHot := iv.CPUPercent >= d.cfg.CPUStartPercent, iv.RAMPercent >= d.cfg.RAMStartPercent
+	if !cpuHot && !ramHot {
 		d.hot = 0
 	} else if d.hot++; d.hot == 1 {
-		d.streakStart = iv.Start
+		d.streakStart, d.streakCPU, d.streakRAM = iv.Start, cpuHot, ramHot
+	} else {
+		d.streakCPU, d.streakRAM = d.streakCPU || cpuHot, d.streakRAM || ramHot
 	}
 	if d.hot == 0 {
 		d.trimRing(iv.End)
@@ -77,12 +81,9 @@ func (d *detector) trimRing(from time.Time) {
 
 func (d *detector) begin(ctx context.Context, iv usage.Interval) error {
 	preroll := d.ring[0].End.Add(-d.ring[0].Span)
-	trigger := triggerOf(d.cfg, iv)
-	id, err := d.sink.StartEpisode(ctx, preroll, d.streakStart, trigger)
+	trigger := d.trigger()
+	id, err := d.sink.StartEpisode(ctx, preroll, d.streakStart, trigger, d.ring, iv.End)
 	if err != nil {
-		return err
-	}
-	if err := d.sink.AddEpisodeSamples(ctx, id, d.ring); err != nil {
 		return err
 	}
 	d.log.Info("episode started", "start", d.streakStart, "trigger", trigger, "preroll_samples", len(d.ring)-d.hot)
@@ -92,13 +93,13 @@ func (d *detector) begin(ctx context.Context, iv usage.Interval) error {
 }
 
 func (d *detector) extend(ctx context.Context, iv usage.Interval, s store.EpisodeSample) error {
-	if err := d.sink.AddEpisodeSamples(ctx, d.id, []store.EpisodeSample{s}); err != nil {
-		return err
-	}
 	if iv.CPUPercent < d.cfg.CPUEndPercent && iv.RAMPercent < d.cfg.RAMEndPercent {
 		d.cool++
 	} else {
 		d.cool, d.lastWarm = 0, iv.End
+	}
+	if err := d.sink.AddEpisodeSamples(ctx, d.id, []store.EpisodeSample{s}, d.lastWarm); err != nil {
+		return err
 	}
 	if d.cool < d.cfg.EndSamples {
 		return nil
@@ -119,8 +120,9 @@ func (d *detector) end(ctx context.Context) error {
 	return nil
 }
 
-func triggerOf(cfg config.Peaks, iv usage.Interval) string {
-	cpu, ram := iv.CPUPercent >= cfg.CPUStartPercent, iv.RAMPercent >= cfg.RAMStartPercent
+// trigger names what the hot streak that started the episode was hot on.
+func (d *detector) trigger() string {
+	cpu, ram := d.streakCPU, d.streakRAM
 	switch {
 	case cpu && ram:
 		return "cpu+ram"

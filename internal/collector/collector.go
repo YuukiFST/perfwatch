@@ -31,8 +31,8 @@ type Sink interface {
 	AddSecond(ctx context.Context, s store.Second) (added bool, err error)
 	CloseMinute(ctx context.Context, start time.Time, programs []store.ProgramMinute) error
 	FinishOpenEpisodes(ctx context.Context) error
-	StartEpisode(ctx context.Context, preroll, start time.Time, trigger string) (id int64, err error)
-	AddEpisodeSamples(ctx context.Context, id int64, samples []store.EpisodeSample) error
+	StartEpisode(ctx context.Context, preroll, start time.Time, trigger string, samples []store.EpisodeSample, lastWarm time.Time) (id int64, err error)
+	AddEpisodeSamples(ctx context.Context, id int64, samples []store.EpisodeSample, lastWarm time.Time) error
 	EndEpisode(ctx context.Context, id int64, end time.Time) error
 	Prune(ctx context.Context, now time.Time) error
 }

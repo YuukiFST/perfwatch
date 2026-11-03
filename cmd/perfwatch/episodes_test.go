@@ -48,6 +48,12 @@ func episodeMachine(t *testing.T) (*machine, string) {
 	steps(5, 20, 93) // RAM episode, with only the 5 samples since the gap as pre-roll
 	steps(10, 20, 80)
 	steps(20, 20, 50)
+	steps(3, 85, 50) // exactly the CPU start threshold, exactly start_samples long: an episode
+	steps(1, 75, 50) // exactly the CPU end threshold: not cool
+	steps(10, 20, 50)
+	steps(3, 20, 87.5) // below the default RAM start; TestRunEpisodeConfig moves it to 87.5
+	steps(1, 20, 75)   // and the RAM end to 75
+	steps(10, 20, 50)
 	steps(4, 95, 50) // still open when the fixture ends
 	return m, m.write(t, "episodes")
 }
@@ -103,7 +109,10 @@ func TestRunEpisodeConfig(t *testing.T) {
 		{"cpu threshold above every sample", "[peaks]\ncpu_start_percent = 96\n"},
 		{"6 hot samples to start, which the 5 s and 4 s episodes lack", "[peaks]\nstart_samples = 6\n"},
 		{"no pre-roll", "[peaks]\npreroll_seconds = 0\n"},
+		{"ram thresholds on samples at exactly 87.5% and 75%", "[peaks]\nram_start_percent = 87.5\nram_end_percent = 75\n"},
 		{"end above start", "[peaks]\ncpu_end_percent = 90\n"},
+		{"not a number", "[peaks]\ncpu_end_percent = nan\n"},
+		{"pre-roll beyond the memory bound", "[peaks]\npreroll_seconds = 301\n"},
 		{"unknown key", "[peaks]\ncpu_start = 90\n"},
 		{"not TOML", "[peaks\n"},
 	} {

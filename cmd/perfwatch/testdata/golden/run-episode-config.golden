@@ -14,15 +14,37 @@ episode trigger=cpu pre-roll from 2026-03-02T09:00:22Z, start 2026-03-02T09:00:5
 [peaks]
 preroll_seconds = 0
 exit: 0
-episodes: 3
+episodes: 4
 episode trigger=cpu pre-roll from 2026-03-02T09:00:52Z, start 2026-03-02T09:00:52Z, end 2026-03-02T09:01:19Z (27s), 37 samples, 0 before the start
 episode trigger=ram pre-roll from 2026-03-02T09:02:34Z, start 2026-03-02T09:02:34Z, end 2026-03-02T09:02:39Z (5s), 15 samples, 0 before the start
-episode trigger=cpu pre-roll from 2026-03-02T09:03:09Z, start 2026-03-02T09:03:09Z, end 2026-03-02T09:03:13Z (4s), 4 samples, 0 before the start
+episode trigger=cpu pre-roll from 2026-03-02T09:03:09Z, start 2026-03-02T09:03:09Z, end 2026-03-02T09:03:13Z (4s), 14 samples, 0 before the start
+episode trigger=cpu pre-roll from 2026-03-02T09:03:37Z, start 2026-03-02T09:03:37Z, end 2026-03-02T09:03:41Z (4s), 4 samples, 0 before the start
+== ram thresholds on samples at exactly 87.5% and 75%
+[peaks]
+ram_start_percent = 87.5
+ram_end_percent = 75
+exit: 0
+episodes: 5
+episode trigger=cpu pre-roll from 2026-03-02T09:00:22Z, start 2026-03-02T09:00:52Z, end 2026-03-02T09:01:19Z (27s), 67 samples, 30 before the start
+episode trigger=ram pre-roll from 2026-03-02T09:02:29Z, start 2026-03-02T09:02:34Z, end 2026-03-02T09:02:49Z (15s), 30 samples, 5 before the start
+episode trigger=cpu pre-roll from 2026-03-02T09:02:39Z, start 2026-03-02T09:03:09Z, end 2026-03-02T09:03:13Z (4s), 44 samples, 30 before the start
+episode trigger=ram pre-roll from 2026-03-02T09:02:53Z, start 2026-03-02T09:03:23Z, end 2026-03-02T09:03:27Z (4s), 44 samples, 30 before the start
+episode trigger=cpu pre-roll from 2026-03-02T09:03:07Z, start 2026-03-02T09:03:37Z, end 2026-03-02T09:03:41Z (4s), 34 samples, 30 before the start
 == end above start
 [peaks]
 cpu_end_percent = 90
 exit: 1
 perfwatch: read <data dir>\perfwatch.toml: peaks: want 0 < cpu_end_percent <= cpu_start_percent <= 100, got 90 and 85
+== not a number
+[peaks]
+cpu_end_percent = nan
+exit: 1
+perfwatch: read <data dir>\perfwatch.toml: peaks: want 0 < cpu_end_percent <= cpu_start_percent <= 100, got NaN and 85
+== pre-roll beyond the memory bound
+[peaks]
+preroll_seconds = 301
+exit: 1
+perfwatch: read <data dir>\perfwatch.toml: peaks: want start_samples and end_samples >= 1 and 0 <= preroll_seconds <= 300
 == unknown key
 [peaks]
 cpu_start = 90
