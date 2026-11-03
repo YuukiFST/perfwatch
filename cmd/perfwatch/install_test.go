@@ -25,7 +25,12 @@ func TestInstall(t *testing.T) {
 	dataDir := t.TempDir()
 	scratch := `Software\perfwatch-e2e-` + strconv.FormatInt(time.Now().UnixNano(), 36)
 	runKey := scratch + `\Run`
-	env := []string{"PERFWATCH_DATA_DIR=" + dataDir, "PERFWATCH_RUN_KEY=" + runKey}
+	// A service name no service has keeps uninstall away from a real perfwatch service.
+	seams := []string{"PERFWATCH_RUN_KEY=" + runKey, "PERFWATCH_SERVICE=perfwatch-e2e-absent"}
+	env := append([]string{"PERFWATCH_DATA_DIR=" + dataDir}, seams...)
+	// uninstall runs from a shell whose default data directory is another one: it must still stop
+	// the collector the autostart entry started.
+	otherEnv := append([]string{"PERFWATCH_DATA_DIR=" + t.TempDir()}, seams...)
 	t.Cleanup(func() {
 		runPerfwatch(t, env, "uninstall") // stops a collector a failed check left running
 		registry.DeleteKey(registry.CURRENT_USER, runKey)
@@ -65,7 +70,7 @@ func TestInstall(t *testing.T) {
 		t.Errorf("the registered command should refuse to start a second collector: %v\n%s", err, stderr.String())
 	}
 
-	record(runPerfwatch(t, env, "uninstall"))
+	record(runPerfwatch(t, otherEnv, "uninstall"))
 	record(runPerfwatch(t, env, "uninstall"))
 	if k, err := registry.OpenKey(registry.CURRENT_USER, runKey, registry.QUERY_VALUE); err == nil {
 		if _, _, err := k.GetStringValue("perfwatch"); err == nil {

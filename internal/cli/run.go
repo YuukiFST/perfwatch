@@ -55,7 +55,7 @@ func runCollector(ctx context.Context, streams Streams, args []string) (err erro
 	}
 
 	if *replayPath != "" && os.Getenv(dataDirEnv) == "" && *dataDirFlag == "" {
-		fmt.Fprintf(streams.Stderr, "perfwatch run: --replay stores the replayed samples; set %s to keep them out of the real history\n", dataDirEnv)
+		fmt.Fprintf(streams.Stderr, "perfwatch run: --replay stores the replayed samples; pass --data-dir or set %s to keep them out of the real history\n", dataDirEnv)
 		return errUsage
 	}
 	dir := *dataDirFlag

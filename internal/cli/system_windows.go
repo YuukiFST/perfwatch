@@ -14,8 +14,8 @@ import (
 	"golang.org/x/sys/windows/svc"
 )
 
-// serviceName is the Windows service install --service creates.
-const serviceName = "perfwatch"
+// defaultServiceName is the Windows service install --service creates.
+const defaultServiceName = "perfwatch"
 
 var (
 	kernel32 = windows.NewLazySystemDLL("kernel32.dll")
@@ -38,11 +38,12 @@ func detachLoneConsole() {
 	}
 }
 
-// stopEventName names the event uninstall signals to stop the collector of dir. Global, so an
-// elevated uninstall reaches a collector in another session too.
+// stopEventName names the event uninstall signals to stop the collector of dir. It lives in the
+// session's namespace, out of reach of other users' sessions; the service stops through the
+// service manager instead.
 func stopEventName(dir string) string {
 	sum := sha256.Sum256([]byte(strings.ToLower(canonicalDir(dir))))
-	return `Global\perfwatch-stop-` + hex.EncodeToString(sum[:8])
+	return `Local\perfwatch-stop-` + hex.EncodeToString(sum[:8])
 }
 
 // canonicalDir spells dir as an absolute path with long names, not 8.3 short names such as
@@ -70,8 +71,13 @@ func watchStop(ctx context.Context, dir string) (context.Context, func(), error)
 	if err != nil {
 		return nil, nil, err
 	}
-	h, err := windows.CreateEvent(nil, 1, 0, name)
+	sa, err := stopEventSecurity()
 	if err != nil {
+		return nil, nil, fmt.Errorf("create stop event: %w", err)
+	}
+	// An install or uninstall that still holds the event keeps it alive: reuse it.
+	h, err := windows.CreateEvent(sa, 1, 0, name)
+	if err != nil && !errors.Is(err, windows.ERROR_ALREADY_EXISTS) {
 		return nil, nil, fmt.Errorf("create stop event: %w", err)
 	}
 	// A stop signaled for a collector that already exited is not meant for this one.
@@ -94,6 +100,21 @@ func watchStop(ctx context.Context, dir string) (context.Context, func(), error)
 		windows.CloseHandle(h)
 	}
 	return ctx, unwatch, nil
+}
+
+// stopEventSecurity lets SYSTEM, Administrators and the collector's own user open the event. An
+// elevated collector would otherwise get its token's default DACL, which leaves out the same
+// user's non-elevated uninstall.
+func stopEventSecurity() (*windows.SecurityAttributes, error) {
+	user, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		return nil, err
+	}
+	sd, err := windows.SecurityDescriptorFromString("D:(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;" + user.User.Sid.String() + ")")
+	if err != nil {
+		return nil, err
+	}
+	return &windows.SecurityAttributes{Length: uint32(unsafe.Sizeof(windows.SecurityAttributes{})), SecurityDescriptor: sd}, nil
 }
 
 // signalStop asks the collector of dir to stop, and reports false when none is listening.
@@ -120,7 +141,7 @@ func inService() bool {
 
 // runAsService runs collect under the service control manager, which stops it through ctx.
 func runAsService(collect func(ctx context.Context) error) error {
-	return svc.Run(serviceName, serviceHandler(collect))
+	return svc.Run(serviceName(), serviceHandler(collect))
 }
 
 type serviceHandler func(ctx context.Context) error

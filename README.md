@@ -15,7 +15,9 @@ perfwatch uninstall    # stop it and remove the autostart; the data stays
 `install` adds `perfwatch` to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, pointing at the `perfwatch.exe` it was run from, so keep the binary where it is.
 Running it again, or the registered command while the collector runs, still leaves one collector.
 At logon Windows opens a console window for the collector; it closes as soon as the collector starts and lets go of it.
-`install --service` installs a Windows service that starts at boot instead, from an elevated prompt; `uninstall` removes that too.
+`install --service` installs a Windows service that starts at boot instead, from an elevated prompt, and removes the logon entry.
+The service runs as LocalSystem, so it runs a copy in `%ProgramFiles%\perfwatch` and keeps its data in `%ProgramData%\perfwatch`, both open to administrators only; read that data from an elevated prompt with `PERFWATCH_DATA_DIR` set to it.
+`uninstall` removes the service and its copy too, from an elevated prompt, and keeps the data.
 
 ## Commands
 

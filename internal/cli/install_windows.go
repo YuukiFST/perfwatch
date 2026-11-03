@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,18 +13,20 @@ import (
 
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
 )
 
 const (
 	// runKeyEnv points install at another key under HKCU; tests use a scratch key so they never
 	// touch the real autostart list. Users leave it unset.
 	runKeyEnv = "PERFWATCH_RUN_KEY"
+	// serviceNameEnv names another service for install and uninstall; tests use a name no
+	// service has, so they never stop or delete a real one. Users leave it unset.
+	serviceNameEnv = "PERFWATCH_SERVICE"
 	// defaultRunKey is the per-user autostart list Windows reads at logon; writing it needs no admin.
 	defaultRunKey = `Software\Microsoft\Windows\CurrentVersion\Run`
 	runValueName  = "perfwatch"
-	// collectorWait bounds how long install and uninstall wait for a collector to start or stop.
+	// collectorWait bounds how long install and uninstall wait for a collector or the service to
+	// start or stop.
 	collectorWait = 15 * time.Second
 )
 
@@ -32,6 +35,13 @@ func runKey() string {
 		return k
 	}
 	return defaultRunKey
+}
+
+func serviceName() string {
+	if n := os.Getenv(serviceNameEnv); n != "" {
+		return n
+	}
+	return defaultServiceName
 }
 
 func runInstall(_ context.Context, streams Streams, args []string) error {
@@ -47,24 +57,27 @@ func runInstall(_ context.Context, streams Streams, args []string) error {
 	if exe, err = filepath.EvalSymlinks(exe); err != nil {
 		return err
 	}
+	if *service {
+		return installService(streams, exe)
+	}
+	// A logon collector next to the service would only add a second copy of the same samples.
+	if installed, err := serviceInstalled(); err != nil {
+		return err
+	} else if installed {
+		return fmt.Errorf("perfwatch already runs as the %s service; run uninstall from an elevated prompt first", serviceName())
+	}
 	dir, err := dataDir()
 	if err != nil {
 		return err
 	}
 	dir = canonicalDir(dir)
-	if *service {
-		return installService(streams, exe, dir)
-	}
 
 	// The data directory goes into the command only when it is not the one a logon would find.
 	runArgs := []string{"run"}
 	if os.Getenv(dataDirEnv) != "" {
 		runArgs = append(runArgs, "--data-dir", dir)
 	}
-	command := windows.EscapeArg(exe)
-	for _, a := range runArgs {
-		command += " " + windows.EscapeArg(a)
-	}
+	command := commandLine(exe, runArgs)
 	k, _, err := registry.CreateKey(registry.CURRENT_USER, runKey(), registry.SET_VALUE)
 	if err != nil {
 		return fmt.Errorf("open HKCU\\%s: %w", runKey(), err)
@@ -75,6 +88,15 @@ func runInstall(_ context.Context, streams Streams, args []string) error {
 	}
 	fmt.Fprintf(streams.Stdout, "Autostart at logon: HKCU\\%s\\%s = %s\n", runKey(), runValueName, command)
 	return startCollector(streams, exe, runArgs, dir)
+}
+
+// commandLine quotes exe and args as one Windows command line.
+func commandLine(exe string, args []string) string {
+	command := windows.EscapeArg(exe)
+	for _, a := range args {
+		command += " " + windows.EscapeArg(a)
+	}
+	return command
 }
 
 // startCollector starts `perfwatch run` with no console, unless a collector already runs for dir.
@@ -88,27 +110,44 @@ func startCollector(streams Streams, exe string, runArgs []string, dir string) e
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start the collector: %w", err)
 	}
-	pid := cmd.Process.Pid
-	cmd.Process.Release()
-	if !waitFor(func() bool { return collectorRunning(dir) }) {
+	// The collector has no console to report a failure on: an exit before it is up is the failure.
+	exited := make(chan error, 1)
+	go func() { exited <- cmd.Wait() }()
+	var exitErr error
+	up := waitFor(func() bool {
+		select {
+		case exitErr = <-exited:
+			return true
+		default:
+			return collectorRunning(dir)
+		}
+	})
+	switch {
+	case exitErr != nil || (up && !collectorRunning(dir)):
+		return fmt.Errorf("the collector exited before it started (%v); run %s in a console to see why",
+			exitErr, commandLine(exe, runArgs))
+	case !up:
 		return fmt.Errorf("the collector did not start within %s; see %s", collectorWait, filepath.Join(dir, logFileName))
 	}
-	fmt.Fprintf(streams.Stdout, "Collector started for %s (process %d).\n", dir, pid)
+	fmt.Fprintf(streams.Stdout, "Collector started for %s (process %d).\n", dir, cmd.Process.Pid)
 	return nil
 }
 
 // collectorRunning reports whether a collector listens on the stop event of dir, which it
-// creates once it holds the data directory's lock and keeps until it exits.
+// creates once it holds the data directory's lock and keeps until it exits. Only a missing event
+// means none: an event this process may not open still belongs to a live collector.
 func collectorRunning(dir string) bool {
 	name, err := windows.UTF16PtrFromString(stopEventName(dir))
 	if err != nil {
 		return false
 	}
 	h, err := windows.OpenEvent(windows.SYNCHRONIZE, false, name)
-	if err != nil {
+	if errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
 		return false
 	}
-	windows.CloseHandle(h)
+	if err == nil {
+		windows.CloseHandle(h)
+	}
 	return true
 }
 
@@ -121,61 +160,48 @@ func waitFor(done func() bool) bool {
 	return done()
 }
 
-func installService(streams Streams, exe, dir string) error {
-	if !windows.GetCurrentProcessToken().IsElevated() {
-		return errors.New("install --service needs an elevated prompt: run it as administrator")
-	}
-	m, err := mgr.Connect()
-	if err != nil {
-		return fmt.Errorf("connect to the service manager: %w", err)
-	}
-	defer m.Disconnect()
-	s, err := m.OpenService(serviceName)
-	if err != nil {
-		// The service runs as LocalSystem, whose profile is not the user's: name the directory.
-		s, err = m.CreateService(serviceName, exe, mgr.Config{
-			DisplayName: "perfwatch",
-			Description: "Records CPU and RAM usage and the processes behind each peak.",
-			StartType:   mgr.StartAutomatic,
-		}, "run", "--data-dir", dir)
-		if err != nil {
-			return fmt.Errorf("create the service: %w", err)
-		}
-		fmt.Fprintf(streams.Stdout, "Service %s installed: starts at boot, data in %s.\n", serviceName, dir)
-	} else {
-		fmt.Fprintf(streams.Stdout, "Service %s is already installed.\n", serviceName)
-	}
-	defer s.Close()
-	if err := s.Start(); err != nil && !errors.Is(err, windows.ERROR_SERVICE_ALREADY_RUNNING) {
-		return fmt.Errorf("start the service: %w", err)
-	}
-	// One way to start is enough: the service replaces a logon autostart entry.
-	if removed, err := removeAutostart(); err != nil {
-		return err
-	} else if removed {
-		fmt.Fprintf(streams.Stdout, "Removed the logon autostart entry; the service starts the collector now.\n")
-	}
-	fmt.Fprintln(streams.Stdout, "Service started.")
-	return nil
-}
-
-func removeAutostart() (bool, error) {
-	k, err := registry.OpenKey(registry.CURRENT_USER, runKey(), registry.SET_VALUE)
+// removeAutostart deletes the logon entry and returns the command it held.
+func removeAutostart() (command string, removed bool, err error) {
+	k, err := registry.OpenKey(registry.CURRENT_USER, runKey(), registry.QUERY_VALUE|registry.SET_VALUE)
 	if errors.Is(err, registry.ErrNotExist) {
-		return false, nil
+		return "", false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("open HKCU\\%s: %w", runKey(), err)
+		return "", false, fmt.Errorf("open HKCU\\%s: %w", runKey(), err)
 	}
 	defer k.Close()
-	err = k.DeleteValue(runValueName)
+	command, _, err = k.GetStringValue(runValueName)
 	if errors.Is(err, registry.ErrNotExist) {
-		return false, nil
+		return "", false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("remove autostart: %w", err)
+		return "", false, fmt.Errorf("read autostart: %w", err)
 	}
-	return true, nil
+	if err := k.DeleteValue(runValueName); err != nil {
+		return "", false, fmt.Errorf("remove autostart: %w", err)
+	}
+	return command, true, nil
+}
+
+// registeredDataDir returns the data directory a logon command runs with: its --data-dir, or the
+// default one when it names none or there is no command.
+func registeredDataDir(command string) (string, error) {
+	if command != "" {
+		args, err := windows.DecomposeCommandLine(command)
+		if err != nil {
+			return "", fmt.Errorf("read the autostart command %s: %w", command, err)
+		}
+		for i, a := range args {
+			if a == "--data-dir" && i+1 < len(args) {
+				return canonicalDir(args[i+1]), nil
+			}
+		}
+	}
+	dir, err := dataDir()
+	if err != nil {
+		return "", err
+	}
+	return canonicalDir(dir), nil
 }
 
 func runUninstall(_ context.Context, streams Streams, args []string) error {
@@ -183,12 +209,7 @@ func runUninstall(_ context.Context, streams Streams, args []string) error {
 	if err := parseFlags(fs, streams, args); err != nil {
 		return err
 	}
-	dir, err := dataDir()
-	if err != nil {
-		return err
-	}
-	dir = canonicalDir(dir)
-	removed, err := removeAutostart()
+	command, removed, err := removeAutostart()
 	if err != nil {
 		return err
 	}
@@ -200,63 +221,31 @@ func runUninstall(_ context.Context, streams Streams, args []string) error {
 	if err := uninstallService(streams); err != nil {
 		return err
 	}
+	// Stop the collector the entry started, which may write somewhere other than this shell's default.
+	dir, err := registeredDataDir(command)
+	if err != nil {
+		return err
+	}
+	if err := stopCollector(streams.Stdout, dir); err != nil {
+		return err
+	}
+	fmt.Fprintf(streams.Stdout, "Data kept in %s.\n", dir)
+	return nil
+}
+
+// stopCollector signals the collector of dir to stop and waits until it has.
+func stopCollector(out io.Writer, dir string) error {
 	stopped, err := signalStop(dir)
 	if err != nil {
 		return err
 	}
 	switch {
 	case !stopped:
-		fmt.Fprintf(streams.Stdout, "No collector runs for %s.\n", dir)
+		fmt.Fprintf(out, "No collector runs for %s.\n", dir)
 	case waitFor(func() bool { return !collectorRunning(dir) }):
-		fmt.Fprintln(streams.Stdout, "Collector stopped.")
+		fmt.Fprintln(out, "Collector stopped.")
 	default:
 		return fmt.Errorf("the collector did not stop within %s; see %s", collectorWait, filepath.Join(dir, logFileName))
 	}
-	fmt.Fprintf(streams.Stdout, "Data kept in %s.\n", dir)
-	return nil
-}
-
-// uninstallService stops and deletes the service when one is installed; that needs admin.
-func uninstallService(streams Streams) error {
-	scm, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
-	if err != nil {
-		return fmt.Errorf("connect to the service manager: %w", err)
-	}
-	name, _ := windows.UTF16PtrFromString(serviceName)
-	h, err := windows.OpenService(scm, name, windows.SERVICE_QUERY_STATUS)
-	windows.CloseServiceHandle(scm)
-	if errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("look up the service: %w", err)
-	}
-	windows.CloseServiceHandle(h)
-	if !windows.GetCurrentProcessToken().IsElevated() {
-		return errors.New("perfwatch is installed as a service: run uninstall from an elevated prompt")
-	}
-	m, err := mgr.Connect()
-	if err != nil {
-		return fmt.Errorf("connect to the service manager: %w", err)
-	}
-	defer m.Disconnect()
-	s, err := m.OpenService(serviceName)
-	if err != nil {
-		return fmt.Errorf("open the service: %w", err)
-	}
-	defer s.Close()
-	if _, err := s.Control(svc.Stop); err != nil && !errors.Is(err, windows.ERROR_SERVICE_NOT_ACTIVE) {
-		return fmt.Errorf("stop the service: %w", err)
-	}
-	if !waitFor(func() bool {
-		st, err := s.Query()
-		return err == nil && st.State == svc.Stopped
-	}) {
-		return fmt.Errorf("the service did not stop within %s", collectorWait)
-	}
-	if err := s.Delete(); err != nil {
-		return fmt.Errorf("delete the service: %w", err)
-	}
-	fmt.Fprintf(streams.Stdout, "Removed service %s.\n", serviceName)
 	return nil
 }
