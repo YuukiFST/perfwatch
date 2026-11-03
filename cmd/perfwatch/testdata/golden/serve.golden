@@ -31,6 +31,7 @@ GET /api/timeline
 status: 200
 content-type: application/json
 {
+  "cpu_avg_percent": 34.96,
   "episodes": [
     {
       "cpu_max_percent": 95,
@@ -86,6 +87,8 @@ content-type: application/json
     }
   ],
   "from": "2026-03-01T09:10:00Z",
+  "ram_avg_percent": 54.05,
+  "samples": 161,
   "step_seconds": 120,
   "thresholds": {
     "cpu_end_percent": 75,
@@ -103,6 +106,7 @@ GET /api/timeline?from=2026-03-02T09:02:50Z&to=2026-03-02T09:03:50Z
 status: 200
 content-type: application/json
 {
+  "cpu_avg_percent": 30.78,
   "episodes": [
     {
       "cpu_max_percent": 85,
@@ -132,6 +136,8 @@ content-type: application/json
     }
   ],
   "from": "2026-03-02T09:02:50Z",
+  "ram_avg_percent": 52.7,
+  "samples": 51,
   "step_seconds": 1,
   "thresholds": {
     "cpu_end_percent": 75,
@@ -198,8 +204,11 @@ GET /api/timeline?from=2026-02-20T09:00:00Z&to=2026-02-20T10:00:00Z
 status: 200
 content-type: application/json
 {
+  "cpu_avg_percent": 0,
   "episodes": [],
   "from": "2026-02-20T09:00:00Z",
+  "ram_avg_percent": 0,
+  "samples": 0,
   "step_seconds": 60,
   "thresholds": {
     "cpu_end_percent": 75,
@@ -210,6 +219,81 @@ content-type: application/json
   "to": "2026-02-20T10:00:00Z"
 }
 buckets: 60, with samples: 0
+
+GET /api/timeline?from=2026-03-01T16:30:30Z&to=2026-03-02T09:10:30Z
+status: 200
+content-type: application/json
+{
+  "cpu_avg_percent": 34.96,
+  "episodes": [
+    {
+      "cpu_max_percent": 95,
+      "end": "2026-03-02T09:01:19Z",
+      "id": 1,
+      "open": false,
+      "preroll_seconds": 30,
+      "programs": [],
+      "ram_max_percent": 50,
+      "seconds": 27,
+      "start": "2026-03-02T09:00:52Z",
+      "trigger": "cpu",
+      "unattributed_avg_percent": 2
+    },
+    {
+      "cpu_max_percent": 20,
+      "end": "2026-03-02T09:02:39Z",
+      "id": 2,
+      "open": false,
+      "preroll_seconds": 5,
+      "programs": [],
+      "ram_max_percent": 93,
+      "seconds": 5,
+      "start": "2026-03-02T09:02:34Z",
+      "trigger": "ram",
+      "unattributed_avg_percent": 2
+    },
+    {
+      "cpu_max_percent": 85,
+      "end": "2026-03-02T09:03:13Z",
+      "id": 3,
+      "open": false,
+      "preroll_seconds": 30,
+      "programs": [],
+      "ram_max_percent": 50,
+      "seconds": 4,
+      "start": "2026-03-02T09:03:09Z",
+      "trigger": "cpu",
+      "unattributed_avg_percent": 2
+    },
+    {
+      "cpu_max_percent": 95,
+      "end": "2026-03-02T09:03:41Z",
+      "id": 4,
+      "open": false,
+      "preroll_seconds": 30,
+      "programs": [],
+      "ram_max_percent": 50,
+      "seconds": 4,
+      "start": "2026-03-02T09:03:37Z",
+      "trigger": "cpu",
+      "unattributed_avg_percent": 2
+    }
+  ],
+  "from": "2026-03-01T16:30:00Z",
+  "ram_avg_percent": 54.05,
+  "samples": 161,
+  "step_seconds": 120,
+  "thresholds": {
+    "cpu_end_percent": 75,
+    "cpu_start_percent": 85,
+    "ram_end_percent": 85,
+    "ram_start_percent": 90
+  },
+  "to": "2026-03-02T09:10:30Z"
+}
+buckets: 501, with samples: 2
+09:00:00 cpu 40.88 ram 50
+09:02:00 cpu 27.64 ram 59.06
 
 GET /api/episodes/1
 status: 200
@@ -537,8 +621,12 @@ GET /api/timeline?from=2020-01-01T00:00:00Z
 status: 400
 content-type: application/json
 {
-  "error": "the range may span at most 365 days"
+  "error": "the range may span at most 31 days"
 }
+
+GET /api/timeline
+status: 200
+content-type: application/json
 
 GET /api/timeline
 status: 421

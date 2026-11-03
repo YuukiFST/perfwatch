@@ -24,8 +24,9 @@ var webFiles embed.FS
 const (
 	// maxTimelinePoints bounds how many buckets one timeline request returns.
 	maxTimelinePoints = 1000
-	// maxTimelineRange is the longest range a timeline request takes: the minute rollups' life.
-	maxTimelineRange = store.MinutesRetention
+	// maxTimelineRange is the longest range a request takes: the page offers up to 30 days, and a
+	// longer ranking would hold the one database connection for every other request.
+	maxTimelineRange = 31 * 24 * time.Hour
 	// rankedPrograms and episodeDetailPrograms are how many programs the dashboard lists.
 	rankedPrograms        = 20
 	episodeDetailPrograms = 10
@@ -78,6 +79,10 @@ func newDashboard(db *store.DB, peaks config.Peaks, port int) http.Handler {
 func (d *dashboard) sameHost(next http.Handler) http.Handler {
 	port := strconv.Itoa(d.port)
 	allowed := map[string]bool{net.JoinHostPort("127.0.0.1", port): true, net.JoinHostPort("localhost", port): true}
+	if d.port == 80 {
+		// Browsers leave the scheme's default port out of Host.
+		allowed["127.0.0.1"], allowed["localhost"] = true, true
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !allowed[r.Host] {
 			http.Error(w, "perfwatch answers only on 127.0.0.1:"+port, http.StatusMisdirectedRequest)
@@ -99,14 +104,18 @@ type thresholdsJSON struct {
 // timelineJSON holds one value per bucket in parallel arrays, as uPlot takes them: TS is each
 // bucket's start in Unix seconds, and null in CPU and RAM marks a bucket with no sample.
 type timelineJSON struct {
-	From        time.Time      `json:"from"`
-	To          time.Time      `json:"to"`
-	StepSeconds float64        `json:"step_seconds"`
-	Thresholds  thresholdsJSON `json:"thresholds"`
-	TS          []int64        `json:"ts"`
-	CPU         []*float64     `json:"cpu"`
-	RAM         []*float64     `json:"ram"`
-	Episodes    []episodeJSON  `json:"episodes"`
+	From        time.Time `json:"from"`
+	To          time.Time `json:"to"`
+	StepSeconds float64   `json:"step_seconds"`
+	// Samples and the averages cover the whole range, weighted by the samples in each bucket.
+	Samples       int64          `json:"samples"`
+	CPUAvgPercent float64        `json:"cpu_avg_percent"`
+	RAMAvgPercent float64        `json:"ram_avg_percent"`
+	Thresholds    thresholdsJSON `json:"thresholds"`
+	TS            []int64        `json:"ts"`
+	CPU           []*float64     `json:"cpu"`
+	RAM           []*float64     `json:"ram"`
+	Episodes      []episodeJSON  `json:"episodes"`
 }
 
 func (d *dashboard) timeline(w http.ResponseWriter, r *http.Request) {
@@ -115,19 +124,15 @@ func (d *dashboard) timeline(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	step := timelineSteps[len(timelineSteps)-1]
-	for _, s := range timelineSteps {
-		if to.Sub(from) <= s*maxTimelinePoints {
-			step = s
-			break
-		}
-	}
+	step := timelineStep(to.Sub(from))
 	// The 1 s samples are kept for a week; older ranges come from the minute rollups.
 	if step < time.Minute && from.Before(now.Add(-store.SecondsRetention)) {
 		step = time.Minute
 	}
 	if step >= time.Minute {
+		// Minute rollups start on the minute; the longer range may need the next step.
 		from = from.Truncate(time.Minute)
+		step = max(step, timelineStep(to.Sub(from)))
 	}
 	points, err := d.db.Timeline(r.Context(), from, to, step)
 	if err != nil {
@@ -147,6 +152,16 @@ func (d *dashboard) timeline(w http.ResponseWriter, r *http.Request) {
 		},
 		Episodes: []episodeJSON{},
 	}
+	var cpuSum, ramSum float64
+	for _, p := range points {
+		out.Samples += p.Samples
+		cpuSum += p.CPUPercent * float64(p.Samples)
+		ramSum += p.RAMPercent * float64(p.Samples)
+	}
+	if out.Samples > 0 {
+		out.CPUAvgPercent = round2(cpuSum / float64(out.Samples))
+		out.RAMAvgPercent = round2(ramSum / float64(out.Samples))
+	}
 	next := 0
 	for start := from; start.Before(to); start = start.Add(step) {
 		out.TS = append(out.TS, start.Unix())
@@ -163,6 +178,16 @@ func (d *dashboard) timeline(w http.ResponseWriter, r *http.Request) {
 		out.Episodes = append(out.Episodes, newEpisodeJSON(episodes[i], loc))
 	}
 	writeJSON(w, out)
+}
+
+// timelineStep returns the shortest step that splits span into at most maxTimelinePoints buckets.
+func timelineStep(span time.Duration) time.Duration {
+	for _, s := range timelineSteps {
+		if span <= s*maxTimelinePoints {
+			return s
+		}
+	}
+	return timelineSteps[len(timelineSteps)-1]
 }
 
 func (d *dashboard) ranking(w http.ResponseWriter, r *http.Request) {

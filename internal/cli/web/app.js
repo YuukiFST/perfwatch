@@ -60,7 +60,8 @@ async function getJSON(url) {
 }
 
 // The range shown, and the ranges zoomed out of, newest last.
-const state = { from: null, to: null, zoomed: [], timeline: null, episode: null };
+// hours is the range button that chose the shown range, null after a zoom.
+const state = { from: null, to: null, hours: "24", zoomed: [], timeline: null, episode: null };
 
 function query(from, to) {
   const q = new URLSearchParams();
@@ -69,10 +70,22 @@ function query(from, to) {
   return q;
 }
 
-async function load(from, to) {
+// Each kind of request counts its calls, so an answer that arrives after a newer one is dropped.
+const latest = { timeline: 0, ranking: 0, episode: 0 };
+
+async function fresh(kind, url) {
+  const n = ++latest[kind];
+  const body = await getJSON(url);
+  return n === latest[kind] ? body : null;
+}
+
+// onLoaded runs only once the range has loaded, so a failed load leaves the zoom history as it was.
+async function load(from, to, onLoaded) {
   $("status").textContent = "";
   try {
-    const timeline = await getJSON("api/timeline?" + query(from, to));
+    const timeline = await fresh("timeline", "api/timeline?" + query(from, to));
+    if (!timeline) return;
+    onLoaded?.();
     state.timeline = timeline;
     state.from = new Date(timeline.from);
     state.to = new Date(timeline.to);
@@ -89,7 +102,16 @@ async function load(from, to) {
 async function loadRanking() {
   const q = query(state.from, state.to);
   if ($("peaks-only").checked) q.set("peaks_only", "true");
-  renderRanking(await getJSON("api/ranking?" + q));
+  const ranking = await fresh("ranking", "api/ranking?" + q);
+  if (ranking) renderRanking(ranking);
+}
+
+// Marks the range button that chose the shown range, or none after a zoom.
+function pressRange(hours) {
+  state.hours = hours;
+  for (const b of document.querySelectorAll(".ranges [data-hours]")) {
+    b.setAttribute("aria-pressed", String(b.dataset.hours === hours));
+  }
 }
 
 // Draws the threshold lines and the shaded spans under the series of a chart.
@@ -188,8 +210,8 @@ function renderTimeline(t) {
         const from = new Date(u.posToVal(u.select.left, "x") * 1000);
         const to = new Date(u.posToVal(u.select.left + u.select.width, "x") * 1000);
         u.setSelect({ left: 0, width: 0, top: 0, height: 0 }, false);
-        state.zoomed.push([state.from, state.to]);
-        load(from, to);
+        const back = [state.from, state.to, state.hours];
+        load(from, to, () => { state.zoomed.push(back); pressRange(null); });
       }],
       ready: [(u) => {
         u.over.addEventListener("mousedown", (e) => { downX = e.clientX; });
@@ -214,15 +236,14 @@ function renderTimelineSummary(t) {
   const cpu = t.cpu.filter((v) => v != null);
   const ram = t.ram.filter((v) => v != null);
   const step = duration(t.step_seconds);
-  if (cpu.length === 0) {
+  if (t.samples === 0) {
     $("timeline-summary").textContent = "Nenhuma amostra neste intervalo. O coletor (perfwatch run) grava os dados enquanto roda.";
   } else {
-    const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
     const gaps = t.cpu.length - cpu.length;
     const episodes = t.episodes.length;
     $("timeline-summary").textContent =
-      `Médias a cada ${step}. CPU: média ${pct(avg(cpu))}, máxima ${pct(Math.max(...cpu))}. ` +
-      `RAM: média ${pct(avg(ram))}, máxima ${pct(Math.max(...ram))}. ` +
+      `Médias a cada ${step}. CPU: média ${pct(t.cpu_avg_percent)}, maior média de intervalo ${pct(Math.max(...cpu))}. ` +
+      `RAM: média ${pct(t.ram_avg_percent)}, maior média de intervalo ${pct(Math.max(...ram))}. ` +
       (gaps ? `${integer.format(gaps)} de ${integer.format(t.cpu.length)} intervalos sem amostra. ` : "") +
       (episodes === 1 ? "1 episódio de pico." : `${integer.format(episodes)} episódios de pico.`);
   }
@@ -238,7 +259,7 @@ function renderEpisodeList(episodes) {
     return;
   }
   list.replaceChildren(...[...episodes].reverse().map((e) => {
-    const button = el("button", { type: "button" },
+    const button = el("button", { type: "button", "data-episode": String(e.id), "aria-controls": "episode-detail" },
       el("span", { class: "when" }, when(new Date(e.start))),
       el("span", { class: "what" }, `${triggerText[e.trigger] ?? e.trigger}, ${duration(e.seconds)}${e.open ? ", ainda aberto" : ""}`));
     button.addEventListener("click", () => showEpisode(e.id));
@@ -251,11 +272,12 @@ let episodeChart = null;
 async function showEpisode(id) {
   let detail;
   try {
-    detail = await getJSON(`api/episodes/${encodeURIComponent(id)}`);
+    detail = await fresh("episode", `api/episodes/${encodeURIComponent(id)}`);
   } catch (err) {
     $("status").textContent = `Não foi possível abrir o episódio: ${err.message}`;
     return;
   }
+  if (!detail) return;
   const e = detail.episode;
   state.episode = e;
   const section = $("episode-detail");
@@ -312,9 +334,12 @@ function programLabel(p) {
 
 function renderRanking(r) {
   const peaks = r.peaks_only ? " dentro de episódios de pico" : "";
-  $("ranking-summary").textContent = r.sampled_seconds === 0
+  // Programs are stored per minute, so the ranking can start before the range shown above.
+  const widened = Date.parse(r.from) < state.from.getTime()
+    ? ` O ranking começa em ${when(new Date(r.from))}: os programas são guardados por minuto.` : "";
+  $("ranking-summary").textContent = (r.sampled_seconds === 0
     ? `Nenhuma amostra${peaks} neste intervalo.`
-    : `${duration(r.sampled_seconds)} amostrados${peaks}; CPU da máquina ${pct(r.cpu_avg_percent)} em média.`;
+    : `${duration(r.sampled_seconds)} amostrados${peaks}; CPU da máquina ${pct(r.cpu_avg_percent)} em média.`) + widened;
   const body = $("ranking").tBodies[0];
   if (r.sampled_seconds === 0) {
     body.replaceChildren();
@@ -349,19 +374,26 @@ function renderRanking(r) {
 
 for (const button of document.querySelectorAll(".ranges [data-hours]")) {
   button.addEventListener("click", () => {
-    const to = new Date(Date.now());
-    state.zoomed = [];
-    load(new Date(to - Number(button.dataset.hours) * 3600 * 1000), null);
+    const hours = button.dataset.hours;
+    load(new Date(Date.now() - Number(hours) * 3600 * 1000), null, () => {
+      state.zoomed = [];
+      pressRange(hours);
+    });
   });
 }
 $("zoom-out").addEventListener("click", () => {
-  const [from, to] = state.zoomed.pop() ?? [];
-  if (from) load(from, to);
+  const back = state.zoomed.at(-1);
+  if (back) load(back[0], back[1], () => { state.zoomed.pop(); pressRange(back[2]); });
 });
 $("peaks-only").addEventListener("change", () => loadRanking().catch((err) => {
   $("status").textContent = `Não foi possível carregar o ranking: ${err.message}`;
 }));
-$("episode-close").addEventListener("click", () => { $("episode-detail").hidden = true; });
+$("episode-close").addEventListener("click", () => {
+  $("episode-detail").hidden = true;
+  // Back to the episode's entry in the list, or the list itself when the range no longer holds it.
+  const opener = document.querySelector(`#episode-list [data-episode="${state.episode.id}"]`);
+  (opener ?? $("episodes-title")).focus();
+});
 
 new ResizeObserver(() => {
   for (const [chart, id] of [[timelineChart, "timeline"], [episodeChart, "episode-chart"]]) {
@@ -371,4 +403,5 @@ new ResizeObserver(() => {
   }
 }).observe(document.querySelector("main"));
 
+pressRange("24");
 load(null, null);
