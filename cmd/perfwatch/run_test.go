@@ -113,9 +113,9 @@ func TestRunRecordsLiveSnapshots(t *testing.T) {
 }
 
 // TestRunAllowsOneCollectorPerDataDir starts a live collector, checks that a second run on the
-// same data directory refuses to start, then kills the first one hard: its stored seconds must
-// all be in their minute rollups, and the next run must start and close the minute and the
-// episode it left open. Thresholds near 0% make every live sample hot and none cool, so the
+// same data directory refuses to start and that top reads while it runs, then kills the first
+// one hard: its stored seconds must all be in their minute rollups, peaks must list the episode
+// it left open, and the next run must start and close that minute and episode. Thresholds near 0% make every live sample hot and none cool, so the
 // first collector is inside an episode when it dies.
 func TestRunAllowsOneCollectorPerDataDir(t *testing.T) {
 	if runtime.GOOS != "windows" {
@@ -147,6 +147,9 @@ func TestRunAllowsOneCollectorPerDataDir(t *testing.T) {
 	fixture := "testdata/fixtures/usage-basic.jsonl"
 	second := runPerfwatch(t, env, "run", "--replay", fixture)
 	assertGolden(t, "run-second-collector", strings.ReplaceAll(second.transcript(), dataDir, "<data dir>"))
+	if res := runPerfwatch(t, env, "top", "--since", "1h"); res.exitCode != 0 {
+		t.Errorf("top while the collector runs failed:\n%s", res.transcript())
+	}
 
 	if err := first.Process.Kill(); err != nil {
 		t.Fatalf("kill the first collector: %v", err)
@@ -171,6 +174,18 @@ func TestRunAllowsOneCollectorPerDataDir(t *testing.T) {
 	}
 	if openEpisodes != 1 || !lastWarmIsNewest {
 		t.Errorf("after a hard kill: %d open episodes (want 1), last warm sample is the newest stored: %v (want true)", openEpisodes, lastWarmIsNewest)
+	}
+	peaks := runPerfwatch(t, env, "peaks")
+	if peaks.exitCode != 0 || strings.Count(peaks.stdout, "(still open)") != 1 {
+		t.Errorf("after a hard kill, peaks should list the episode as still open:\n%s", peaks.transcript())
+	}
+	var listed struct {
+		Episodes []struct {
+			Open bool `json:"open"`
+		} `json:"episodes"`
+	}
+	if res := runPerfwatch(t, env, "peaks", "--json"); json.Unmarshal([]byte(res.stdout), &listed) != nil || len(listed.Episodes) != 1 || !listed.Episodes[0].Open {
+		t.Errorf("after a hard kill, peaks --json should list one open episode:\n%s", res.transcript())
 	}
 
 	if res := runPerfwatch(t, env, "run", "--replay", fixture); res.exitCode != 0 {
