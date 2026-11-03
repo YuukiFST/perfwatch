@@ -3,6 +3,7 @@
 package logfile
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -50,27 +51,32 @@ func (l *File) open() error {
 func (l *File) Write(p []byte) (int, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	var rotateErr error
 	if l.size > 0 && l.size+int64(len(p)) > MaxBytes {
-		if err := l.rotate(); err != nil {
-			return 0, err
-		}
+		rotateErr = l.rotate()
 	}
+	// A failed rotation still writes p, to the oversized file, and reports the failure after.
 	n, err := l.f.Write(p)
 	l.size += int64(n)
-	return n, err
+	return n, errors.Join(err, rotateErr)
 }
 
+// rotate moves the current file aside first, and shifts the older files only once that worked,
+// so a file another process holds open costs no rotated history.
 func (l *File) rotate() error {
 	if err := l.f.Close(); err != nil {
 		return fmt.Errorf("rotate log: %w", err)
 	}
-	for i := Keep - 1; i >= 1; i-- {
-		os.Rename(fmt.Sprintf("%s.%d", l.path, i), fmt.Sprintf("%s.%d", l.path, i+1)) // a missing file is fine
+	aside := l.path + ".rotating"
+	renameErr := os.Rename(l.path, aside)
+	if renameErr == nil {
+		for i := Keep - 1; i >= 1; i-- {
+			os.Rename(fmt.Sprintf("%s.%d", l.path, i), fmt.Sprintf("%s.%d", l.path, i+1)) // a missing file is fine
+		}
+		renameErr = os.Rename(aside, l.path+".1")
 	}
-	// Reopen even when the rename fails, so logging goes on in the oversized file.
-	renameErr := os.Rename(l.path, l.path+".1")
 	if err := l.open(); err != nil {
-		return err
+		return errors.Join(renameErr, err)
 	}
 	if renameErr != nil {
 		return fmt.Errorf("rotate log: %w", renameErr)
