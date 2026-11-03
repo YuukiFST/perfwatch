@@ -17,6 +17,7 @@ Under construction: the commands land one pull request at a time.
 | `perfwatch top [--since 24h] [--peaks-only] [--limit 20] [--json]` | Rank the programs by CPU time over the range: CPU-seconds, average and maximum CPU, maximum private RAM, instances. `--peaks-only` counts only the seconds inside peak episodes. |
 | `perfwatch peaks [--since 7d] [--json]` | List the peak episodes in the range, newest first, with their maximum CPU and RAM, unattributed CPU, pre-roll and top programs. |
 | `perfwatch serve [--port 7313]` | Serve the dashboard on `http://127.0.0.1:7313/`, loopback only, until Ctrl+C. |
+| `perfwatch export --html report.html [--since 7d]` | Write the dashboard of the range to one HTML file that opens from disk, with no server and no network. |
 | `perfwatch version` | Print the version. |
 
 `run --print` reads like this:
@@ -77,6 +78,9 @@ preroll_seconds = 30
 Every chart has a text summary and its data as a table.
 The page, its script and [uPlot](https://github.com/leeoniya/uPlot) 1.6.32 (MIT, `internal/cli/web/vendor/uPlot.LICENSE`) are embedded in the binary; the page loads nothing from the network.
 The server answers only requests addressed to `127.0.0.1` or `localhost` on its port.
+
+`perfwatch export` writes the same views for a fixed range into one file, with its data, styles and scripts inline; it has no range buttons or zoom.
+The file names every program in the ranking and its path on disk, so read it before sharing it.
 
 ## Log
 

@@ -52,7 +52,20 @@ function cell(text, label, numeric) {
   return el("td", { class: numeric ? "num" : "", "data-label": label }, text);
 }
 
+// An exported report carries every answer the page asks for, and has no server behind it.
+const report = window.PERFWATCH_REPORT;
+
+function reportAnswer(url) {
+  const u = new URL(url, "http://report/");
+  if (u.pathname === "/api/timeline") return report.timeline;
+  if (u.pathname === "/api/ranking") return u.searchParams.get("peaks_only") === "true" ? report.ranking_peaks : report.ranking;
+  const id = u.pathname.match(/^\/api\/episodes\/(\d+)$/)?.[1];
+  if (id && report.episodes[id]) return report.episodes[id];
+  throw new Error("este relatório não guarda esses dados");
+}
+
 async function getJSON(url) {
+  if (report) return reportAnswer(url);
   const res = await fetch(url, { headers: { Accept: "application/json" } });
   const body = await res.json();
   if (!res.ok) throw new Error(body.error || res.statusText);
@@ -90,7 +103,8 @@ async function load(from, to, onLoaded) {
     state.from = new Date(timeline.from);
     state.to = new Date(timeline.to);
     $("zoom-out").disabled = state.zoomed.length === 0;
-    $("range-label").textContent = `${when(state.from)} a ${when(state.to)}`;
+    $("range-label").textContent = `${when(state.from)} a ${when(state.to)}` +
+      (report ? ` · relatório gerado em ${when(new Date(report.generated))}` : "");
     renderTimeline(timeline);
     renderEpisodeList(timeline.episodes);
     await loadRanking();
@@ -225,7 +239,7 @@ function renderTimeline(t) {
         });
       }],
     };
-    timelineChart = new uPlot(chartOptions(container.clientWidth, hooks, true), data, container);
+    timelineChart = new uPlot(chartOptions(container.clientWidth, hooks, !report), data, container);
   } else {
     timelineChart.setData(data);
   }
@@ -403,5 +417,11 @@ new ResizeObserver(() => {
   }
 }).observe(document.querySelector("main"));
 
-pressRange("24");
-load(null, null);
+if (report) {
+  // The report covers the range it was exported for: no range buttons, no zoom.
+  document.body.classList.add("report");
+  load(null, null);
+} else {
+  pressRange("24");
+  load(null, null);
+}
