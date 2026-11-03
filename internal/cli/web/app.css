@@ -134,6 +134,8 @@ tr.share td:first-child { color: var(--muted); font-style: normal; }
 
 .toggle { display: flex; gap: 6px; align-items: center; font-size: 0.875rem; color: var(--muted); }
 
+.report .live-only { display: none; }
+
 .visually-hidden {
   position: absolute;
   width: 1px;

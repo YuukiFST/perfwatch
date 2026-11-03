@@ -8,6 +8,7 @@ Commands:
   top        rank the programs that used the most CPU and RAM
   peaks      list the peak episodes and who caused them
   serve      serve the dashboard on 127.0.0.1
+  export     write the dashboard of a range to one HTML file
   version    print the perfwatch version
 
 Run "perfwatch <command> -h" for the flags of a command.
