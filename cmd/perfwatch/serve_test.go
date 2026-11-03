@@ -125,6 +125,8 @@ func TestServe(t *testing.T) {
 	timeline("")                                                   // the last 24 h, from the minute rollups
 	timeline("?from=2026-03-02T09:02:50Z&to=2026-03-02T09:03:50Z") // 1 s buckets
 	timeline("?from=2026-02-20T09:00:00Z&to=2026-02-20T10:00:00Z") // 1 s samples expired: minutes
+	// Just under 1000 minutes, off the minute: starting on the minute must not make 1001 buckets.
+	timeline("?from=2026-03-01T16:30:30Z&to=2026-03-02T09:10:30Z")
 
 	_, body := get("/api/episodes/1", "")
 	var detail struct {
@@ -166,7 +168,8 @@ func TestServe(t *testing.T) {
 		writeJSON(v)
 	}
 
-	// A name other than the loopback one, as a rebound DNS name would send, is refused.
+	// localhost is the loopback too; a name other than those, as a rebound DNS name would send, is refused.
+	get("/api/timeline", "localhost:"+m[1])
 	_, body = get("/api/timeline", "perfwatch.example:"+m[1])
 	golden.Write(bytes.ReplaceAll(body, []byte(m[1]), []byte("<port>")))
 

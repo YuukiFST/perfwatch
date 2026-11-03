@@ -9,6 +9,7 @@ import (
 // TimelinePoint is the machine's average usage over one bucket of a timeline.
 type TimelinePoint struct {
 	Start      time.Time
+	Samples    int64
 	CPUPercent float64
 	RAMPercent float64
 }
@@ -21,11 +22,11 @@ func (db *DB) Timeline(ctx context.Context, from, to time.Time, step time.Durati
 	stepMs, fromMs := step.Milliseconds(), from.UnixMilli()
 	// A second belongs to the bucket its interval ends in; a minute to the one it starts in.
 	query := `
-SELECT (ts - ? - 1) / ?, sum(cpu_pct * span_ms) / sum(span_ms), sum(ram_pct * span_ms) / sum(span_ms)
+SELECT (ts - ? - 1) / ?, count(*), sum(cpu_pct * span_ms) / sum(span_ms), sum(ram_pct * span_ms) / sum(span_ms)
 FROM system_seconds WHERE ts > ? AND ts <= ? GROUP BY 1 ORDER BY 1`
 	if step >= time.Minute {
 		query = `
-SELECT (minute - ?) / ?, sum(cpu_sum) / sum(samples), sum(ram_sum) / sum(samples)
+SELECT (minute - ?) / ?, sum(samples), sum(cpu_sum) / sum(samples), sum(ram_sum) / sum(samples)
 FROM system_minutes WHERE minute >= ? AND minute < ? AND samples > 0 GROUP BY 1 ORDER BY 1`
 	}
 	rows, err := db.sql.QueryContext(ctx, query, fromMs, stepMs, fromMs, to.UnixMilli())
@@ -37,7 +38,7 @@ FROM system_minutes WHERE minute >= ? AND minute < ? AND samples > 0 GROUP BY 1 
 	for rows.Next() {
 		var bucket int64
 		var p TimelinePoint
-		if err := rows.Scan(&bucket, &p.CPUPercent, &p.RAMPercent); err != nil {
+		if err := rows.Scan(&bucket, &p.Samples, &p.CPUPercent, &p.RAMPercent); err != nil {
 			return nil, fmt.Errorf("read timeline: %w", err)
 		}
 		p.Start = from.Add(time.Duration(bucket) * step)
