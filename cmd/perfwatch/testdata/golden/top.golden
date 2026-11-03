@@ -1,0 +1,202 @@
+$ perfwatch top
+exit: 0
+--- stdout
+Top programs, 2026-03-01 09:10 to 2026-03-02 09:10 UTC
+2m41s sampled, machine CPU 35.0% on average
+
+PROGRAM         CPU-S  AVG CPU  MAX CPU  MAX RAM  INSTANCES
+stress.exe       48.2    15.0%    75.0%   20 MiB          1
+chrome.exe       32.2    10.0%    10.0%  700 MiB          2
+System            6.4     2.0%     2.0%    1 MiB          1
+(unattributed)    6.4     2.0%
+f01.exe           1.6     0.5%     0.5%   10 MiB          1
+f02.exe           1.6     0.5%     0.5%   20 MiB          1
+f03.exe           1.6     0.5%     0.5%   30 MiB          1
+f04.exe           1.6     0.5%     0.5%   40 MiB          1
+f05.exe           1.6     0.5%     0.5%   50 MiB          1
+f06.exe           1.6     0.5%     0.5%   60 MiB          1
+f07.exe           1.6     0.5%     0.5%   70 MiB          1
+f08.exe           1.6     0.5%     0.5%   80 MiB          1
+f09.exe           1.6     0.5%     0.5%   90 MiB          1
+f10.exe           1.6     0.5%     0.5%  100 MiB          1
+f11.exe           1.6     0.5%     0.5%  110 MiB          1
+f12.exe           1.6     0.5%     0.5%  120 MiB          1
+big.exe           0.0     0.0%     0.0%  3.0 GiB          1
+--- stderr
+
+$ perfwatch top --json --limit 5
+exit: 0
+--- stdout
+{
+  "from": "2026-03-01T09:10:00Z",
+  "to": "2026-03-02T09:10:00Z",
+  "peaks_only": false,
+  "sampled_seconds": 161,
+  "cpu_avg_percent": 34.96,
+  "unattributed": {
+    "cpu_seconds": 6.44,
+    "cpu_avg_percent": 2
+  },
+  "programs": [
+    {
+      "name": "stress.exe",
+      "cpu_seconds": 48.16,
+      "cpu_avg_percent": 14.96,
+      "cpu_max_percent": 75,
+      "private_max_bytes": 20971520,
+      "instances_max": 1
+    },
+    {
+      "name": "chrome.exe",
+      "cpu_seconds": 32.2,
+      "cpu_avg_percent": 10,
+      "cpu_max_percent": 10,
+      "private_max_bytes": 734003200,
+      "instances_max": 2
+    },
+    {
+      "name": "System",
+      "cpu_seconds": 6.44,
+      "cpu_avg_percent": 2,
+      "cpu_max_percent": 2,
+      "private_max_bytes": 1048576,
+      "instances_max": 1
+    },
+    {
+      "name": "f01.exe",
+      "cpu_seconds": 1.61,
+      "cpu_avg_percent": 0.5,
+      "cpu_max_percent": 0.5,
+      "private_max_bytes": 10485760,
+      "instances_max": 1
+    },
+    {
+      "name": "f02.exe",
+      "cpu_seconds": 1.61,
+      "cpu_avg_percent": 0.5,
+      "cpu_max_percent": 0.5,
+      "private_max_bytes": 20971520,
+      "instances_max": 1
+    }
+  ]
+}
+--- stderr
+
+$ perfwatch top --since 8m --limit 3
+exit: 0
+--- stdout
+Top programs, 2026-03-02 09:02 to 2026-03-02 09:10 UTC
+1m12s sampled, machine CPU 27.6% on average
+
+PROGRAM         CPU-S  AVG CPU  MAX CPU  MAX RAM  INSTANCES
+chrome.exe       14.4    10.0%    10.0%  700 MiB          2
+stress.exe       11.0     7.6%    75.0%   20 MiB          1
+System            2.9     2.0%     2.0%    1 MiB          1
+(unattributed)    2.9     2.0%
+--- stderr
+
+$ perfwatch top --peaks-only
+exit: 0
+--- stdout
+Top programs during peak episodes, 2026-03-01 09:10 to 2026-03-02 09:10 UTC
+40s sampled, machine CPU 76.5% on average
+
+PROGRAM         CPU-S  AVG CPU  MAX CPU  MAX RAM  INSTANCES
+stress.exe       45.2    56.5%    75.0%   20 MiB          1
+chrome.exe        8.0    10.0%    10.0%  700 MiB          2
+System            1.6     2.0%     2.0%    1 MiB          1
+(unattributed)    1.6     2.0%
+f01.exe           0.4     0.5%     0.5%   10 MiB          1
+f02.exe           0.4     0.5%     0.5%   20 MiB          1
+f03.exe           0.4     0.5%     0.5%   30 MiB          1
+f04.exe           0.4     0.5%     0.5%   40 MiB          1
+f05.exe           0.4     0.5%     0.5%   50 MiB          1
+f06.exe           0.4     0.5%     0.5%   60 MiB          1
+f07.exe           0.4     0.5%     0.5%   70 MiB          1
+f08.exe           0.4     0.5%     0.5%   80 MiB          1
+f09.exe           0.4     0.5%     0.5%   90 MiB          1
+f10.exe           0.4     0.5%     0.5%  100 MiB          1
+f11.exe           0.4     0.5%     0.5%  110 MiB          1
+f12.exe           0.4     0.5%     0.5%  120 MiB          1
+big.exe           0.0     0.0%     0.0%  3.0 GiB          1
+--- stderr
+
+$ perfwatch top --peaks-only --json --limit 3
+exit: 0
+--- stdout
+{
+  "from": "2026-03-01T09:10:00Z",
+  "to": "2026-03-02T09:10:00Z",
+  "peaks_only": true,
+  "sampled_seconds": 40,
+  "cpu_avg_percent": 76.45,
+  "unattributed": {
+    "cpu_seconds": 1.6,
+    "cpu_avg_percent": 2
+  },
+  "programs": [
+    {
+      "name": "stress.exe",
+      "cpu_seconds": 45.16,
+      "cpu_avg_percent": 56.45,
+      "cpu_max_percent": 75,
+      "private_max_bytes": 20971520,
+      "instances_max": 1
+    },
+    {
+      "name": "chrome.exe",
+      "cpu_seconds": 8,
+      "cpu_avg_percent": 10,
+      "cpu_max_percent": 10,
+      "private_max_bytes": 734003200,
+      "instances_max": 2
+    },
+    {
+      "name": "System",
+      "cpu_seconds": 1.6,
+      "cpu_avg_percent": 2,
+      "cpu_max_percent": 2,
+      "private_max_bytes": 1048576,
+      "instances_max": 1
+    }
+  ]
+}
+--- stderr
+
+$ perfwatch top --since 1m
+exit: 0
+--- stdout
+Top programs, 2026-03-02 09:09 to 2026-03-02 09:10 UTC
+No samples in this range.
+--- stderr
+
+$ perfwatch top --since 0
+exit: 2
+--- stdout
+--- stderr
+invalid value "0" for flag -since: want a positive duration such as 90m, 24h or 7d
+Usage: perfwatch top [flags]
+  -json
+    	print JSON instead of a table
+  -limit int
+    	show at most this many programs (default 20)
+  -peaks-only
+    	rank only the seconds inside peak episodes
+  -since value
+    	rank the usage of this much time back from now: 90m, 24h, 7d (default 1d)
+
+$ perfwatch top --since 3x
+exit: 2
+--- stdout
+--- stderr
+invalid value "3x" for flag -since: want a positive duration such as 90m, 24h or 7d
+Usage: perfwatch top [flags]
+  -json
+    	print JSON instead of a table
+  -limit int
+    	show at most this many programs (default 20)
+  -peaks-only
+    	rank only the seconds inside peak episodes
+  -since value
+    	rank the usage of this much time back from now: 90m, 24h, 7d (default 1d)
+

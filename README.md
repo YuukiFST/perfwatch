@@ -14,6 +14,8 @@ Under construction: the commands land one pull request at a time.
 | Command | What it does |
 |---------|--------------|
 | `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl]` | Sample CPU and RAM every second until interrupted. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system, into the directory `PERFWATCH_DATA_DIR` names. |
+| `perfwatch top [--since 24h] [--peaks-only] [--limit 20] [--json]` | Rank the programs by CPU time over the range: CPU-seconds, average and maximum CPU, maximum private RAM, instances. `--peaks-only` counts only the seconds inside peak episodes. |
+| `perfwatch peaks [--since 7d] [--json]` | List the peak episodes in the range, newest first, with their maximum CPU and RAM, unattributed CPU, pre-roll and top programs. |
 | `perfwatch version` | Print the version. |
 
 `run --print` reads like this:
@@ -24,6 +26,8 @@ Under construction: the commands land one pull request at a time.
 
 - Per-process CPU is a share of the whole machine: 100% means every logical CPU was busy.
 - Instances of one program are summed under its name, with the instance count after `x`; `svchost.exe` is split by its `-k` service group.
+- `--since` takes Go durations (`90m`, `24h`) or whole days (`7d`).
+- `top` reads the per-minute top 20s, so a program that ranked out of a minute adds nothing for it; `(unattributed)` is always a row of its own.
 - `unattributed` is busy CPU that no sampled process accounts for: interrupt and DPC time, processes that started and exited between two samples, and the last partial second of every process that exited.
 
 ## Data
@@ -72,6 +76,7 @@ At 5 MB the log rotates to `perfwatch.log.1`, keeping three old files.
 go vet ./...
 go test ./...                      # end-to-end: builds perfwatch and diffs its output against testdata/golden
 go test ./cmd/perfwatch -update    # rewrite the golden files after an intended output change
+PERFWATCH_NOW=2026-03-02T09:10:00Z perfwatch top    # fix now, and show times in UTC, as the tests do
 go build ./cmd/perfwatch
 ```
 
