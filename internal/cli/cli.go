@@ -37,6 +37,7 @@ func commands() []command {
 		{name: "run", summary: "sample CPU and RAM every second until interrupted", run: runRun},
 		{name: "top", summary: "rank the programs that used the most CPU and RAM", run: runTop},
 		{name: "peaks", summary: "list the peak episodes and who caused them", run: runPeaks},
+		{name: "serve", summary: "serve the dashboard on 127.0.0.1", run: runServe},
 		{name: "version", summary: "print the perfwatch version", run: runVersion},
 	}
 }
