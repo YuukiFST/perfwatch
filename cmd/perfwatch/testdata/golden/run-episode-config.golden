@@ -1,0 +1,34 @@
+== cpu threshold above every sample
+[peaks]
+cpu_start_percent = 96
+exit: 0
+episodes: 1
+episode trigger=ram pre-roll from 2026-03-02T09:02:29Z, start 2026-03-02T09:02:34Z, end 2026-03-02T09:02:39Z (5s), 20 samples, 5 before the start
+== 6 hot samples to start, which the 5 s and 4 s episodes lack
+[peaks]
+start_samples = 6
+exit: 0
+episodes: 1
+episode trigger=cpu pre-roll from 2026-03-02T09:00:22Z, start 2026-03-02T09:00:52Z, end 2026-03-02T09:01:19Z (27s), 67 samples, 30 before the start
+== no pre-roll
+[peaks]
+preroll_seconds = 0
+exit: 0
+episodes: 3
+episode trigger=cpu pre-roll from 2026-03-02T09:00:52Z, start 2026-03-02T09:00:52Z, end 2026-03-02T09:01:19Z (27s), 37 samples, 0 before the start
+episode trigger=ram pre-roll from 2026-03-02T09:02:34Z, start 2026-03-02T09:02:34Z, end 2026-03-02T09:02:39Z (5s), 15 samples, 0 before the start
+episode trigger=cpu pre-roll from 2026-03-02T09:03:09Z, start 2026-03-02T09:03:09Z, end 2026-03-02T09:03:13Z (4s), 4 samples, 0 before the start
+== end above start
+[peaks]
+cpu_end_percent = 90
+exit: 1
+perfwatch: read <data dir>\perfwatch.toml: peaks: want 0 < cpu_end_percent <= cpu_start_percent <= 100, got 90 and 85
+== unknown key
+[peaks]
+cpu_start = 90
+exit: 1
+perfwatch: read <data dir>\perfwatch.toml: unknown key peaks.cpu_start
+== not TOML
+[peaks
+exit: 1
+perfwatch: read <data dir>\perfwatch.toml: toml: line 2: expected '.' or ']' to end table name, but got '\n' instead

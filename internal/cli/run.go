@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/YuukiFST/perfwatch/internal/collector"
+	"github.com/YuukiFST/perfwatch/internal/config"
 	"github.com/YuukiFST/perfwatch/internal/lock"
 	"github.com/YuukiFST/perfwatch/internal/logfile"
 	"github.com/YuukiFST/perfwatch/internal/sampler"
@@ -75,14 +76,19 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 		}
 	}()
 
+	cfg, err := config.Load(filepath.Join(dir, config.FileName))
+	if err != nil {
+		return err
+	}
 	db, err := store.Open(ctx, filepath.Join(dir, store.FileName))
 	if err != nil {
 		return err
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
-	// Ctrl+C cancels ctx to stop waiting for samples; writes still finish, the last partial minute included.
+	// Ctrl+C cancels ctx to stop waiting for samples; writes still finish, the last partial minute
+	// and the open episode included.
 	writeCtx := context.WithoutCancel(ctx)
-	coll, err := collector.New(writeCtx, db)
+	coll, err := collector.New(writeCtx, db, cfg.Peaks, log)
 	if err != nil {
 		return err
 	}

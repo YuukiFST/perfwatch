@@ -182,9 +182,9 @@ func storeState(t *testing.T, path, label string) string {
 	return b.String()
 }
 
-func eachRow(t *testing.T, db *sql.DB, query string, row func(scan func(...any))) {
+func eachRow(t *testing.T, db *sql.DB, query string, row func(scan func(...any)), args ...any) {
 	t.Helper()
-	rows, err := db.Query(query)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		t.Fatalf("%s: %v", query, err)
 	}
