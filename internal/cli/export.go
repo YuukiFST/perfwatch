@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/YuukiFST/perfwatch/internal/config"
+	"github.com/YuukiFST/perfwatch/internal/store"
 )
 
 // reportJSON is everything the dashboard page asks the server for, answered ahead of time.
@@ -41,9 +42,28 @@ func runExport(ctx context.Context, streams Streams, args []string) (err error) 
 	if err != nil {
 		return err
 	}
+	if since.d > store.MinutesRetention {
+		fmt.Fprintf(streams.Stderr, "invalid value %q for flag -since: at most %dd, as long as perfwatch keeps its minute history\n",
+			since.String(), store.MinutesRetention/(24*time.Hour))
+		fs.SetOutput(streams.Stderr)
+		fs.Usage()
+		return errUsage
+	}
 	dir, err := dataDir()
 	if err != nil {
 		return err
+	}
+	out, err := filepath.Abs(*htmlPath)
+	if err != nil {
+		return err
+	}
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	// The data directory holds the database the report is read from; a report never replaces it.
+	if strings.EqualFold(filepath.Dir(out), absDir) {
+		return fmt.Errorf("write the report outside the data directory %s", dir)
 	}
 	cfg, err := config.Load(filepath.Join(dir, config.FileName))
 	if err != nil {
@@ -79,13 +99,30 @@ func runExport(ctx context.Context, streams Streams, args []string) (err error) 
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(*htmlPath, page, 0o644); err != nil {
+	if err := writeFileAtomic(out, page); err != nil {
 		return fmt.Errorf("write report: %w", err)
 	}
 	t := report.Timeline
 	fmt.Fprintf(streams.Stdout, "Wrote %s: %s to %s, peak episodes: %d, %d KiB\n", *htmlPath,
 		t.From.Format("2006-01-02 15:04"), t.To.Format("2006-01-02 15:04 MST"), len(t.Episodes), (len(page)+1023)/1024)
 	return nil
+}
+
+// writeFileAtomic writes data to a temporary file beside path and renames it over path, so a
+// failed write leaves an existing file as it was.
+func writeFileAtomic(path string, data []byte) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return err
+	}
+	_, err = tmp.Write(data)
+	if err = errors.Join(err, tmp.Close()); err == nil {
+		err = os.Rename(tmp.Name(), path)
+	}
+	if err != nil {
+		os.Remove(tmp.Name())
+	}
+	return err
 }
 
 // reportPage inlines the dashboard page's styles, scripts and the report data into one file

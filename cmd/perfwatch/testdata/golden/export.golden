@@ -15,6 +15,17 @@ Usage: perfwatch export [flags]
   -since value
     	report this much time back from now: 90m, 24h, 7d (default 7d)
 
+$ perfwatch export --html report.html --since 366d
+exit: 2
+--- stdout
+--- stderr
+invalid value "366d" for flag -since: at most 365d, as long as perfwatch keeps its minute history
+Usage: perfwatch export [flags]
+  -html string
+    	write the report to this HTML file
+  -since value
+    	report this much time back from now: 90m, 24h, 7d (default 7d)
+
 generated: 2026-03-02T09:10:00Z
 
 timeline
