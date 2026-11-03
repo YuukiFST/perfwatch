@@ -35,6 +35,7 @@ Under construction: the commands land one pull request at a time.
 | Machine CPU, RAM and unattributed CPU | 1 s | 7 days |
 | Machine rollups: average, maximum, p95 | 1 min | 1 year |
 | Per-program CPU-seconds, max CPU, max private RAM, instances: the top 20 by CPU plus the top 20 by RAM | 1 min | 90 days |
+| Peak episodes: machine usage and the top 10 programs by CPU plus the top 10 by private RAM, from 30 s before the start until the episode cools down | 1 s | 180 days after the end |
 
 Retention runs when `run` starts and once an hour after.
 An interval longer than 5 s (the machine slept or the collector was stopped) is not stored, so it shows as a gap.
@@ -43,9 +44,26 @@ An interval longer than 5 s (the machine slept or the collector was stopped) is 
 - Machine rollups are written with every sample, so killing `run` loses none of them; the per-program breakdown of the minute in progress is lost.
 - Replaying samples already stored changes nothing, even after their 1 s rows have expired.
 
+## Peak episodes
+
+An episode starts when CPU reaches 85% or RAM reaches 90% for 3 consecutive samples, and ends after 10 consecutive samples with CPU below 75% and RAM below 85%.
+Its end is the last sample before that cool-down; a gap in the samples, or `run` stopping, ends it too.
+To change the thresholds, put a `perfwatch.toml` in the data directory; every key is optional and an unknown key is an error:
+
+```toml
+[peaks]
+cpu_start_percent = 85
+cpu_end_percent = 75
+ram_start_percent = 90
+ram_end_percent = 85
+start_samples = 3
+end_samples = 10
+preroll_seconds = 30
+```
+
 ## Log
 
-`run` writes JSON lines to `perfwatch.log` in the data directory: its start and stop, and once a minute its own CPU (as a share of one core) and working set.
+`run` writes JSON lines to `perfwatch.log` in the data directory: its start and stop, each episode, and once a minute its own CPU (as a share of one core) and working set.
 At 5 MB the log rotates to `perfwatch.log.1`, keeping three old files.
 
 ## Development

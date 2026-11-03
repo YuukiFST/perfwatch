@@ -5,9 +5,12 @@ package collector
 import (
 	"cmp"
 	"context"
+	"errors"
+	"log/slog"
 	"slices"
 	"time"
 
+	"github.com/YuukiFST/perfwatch/internal/config"
 	"github.com/YuukiFST/perfwatch/internal/store"
 	"github.com/YuukiFST/perfwatch/internal/usage"
 )
@@ -27,24 +30,33 @@ type Sink interface {
 	FinishOpenMinutes(ctx context.Context) error
 	AddSecond(ctx context.Context, s store.Second) (added bool, err error)
 	CloseMinute(ctx context.Context, start time.Time, programs []store.ProgramMinute) error
+	FinishOpenEpisodes(ctx context.Context) error
+	StartEpisode(ctx context.Context, preroll, start time.Time, trigger string) (id int64, err error)
+	AddEpisodeSamples(ctx context.Context, id int64, samples []store.EpisodeSample) error
+	EndEpisode(ctx context.Context, id int64, end time.Time) error
 	Prune(ctx context.Context, now time.Time) error
 }
 
 // Collector writes each sample, with its share of the machine's minute rollup, as it arrives,
-// and keeps the programs of the current minute in memory until the minute closes.
+// keeps the programs of the current minute in memory until the minute closes, and stores the
+// peak episodes it detects.
 type Collector struct {
 	sink      Sink
 	minute    *minuteRollup
+	episodes  *detector
 	nextPrune time.Time
 }
 
-// New closes the minutes a previous collector left open and returns a collector writing to
-// sink; retention runs on the first sample.
-func New(ctx context.Context, sink Sink) (*Collector, error) {
+// New closes the minutes and episodes a previous collector left open and returns a collector
+// writing to sink; retention runs on the first sample.
+func New(ctx context.Context, sink Sink, peaks config.Peaks, log *slog.Logger) (*Collector, error) {
 	if err := sink.FinishOpenMinutes(ctx); err != nil {
 		return nil, err
 	}
-	return &Collector{sink: sink}, nil
+	if err := sink.FinishOpenEpisodes(ctx); err != nil {
+		return nil, err
+	}
+	return &Collector{sink: sink, episodes: &detector{cfg: peaks, sink: sink, log: log}}, nil
 }
 
 // Record stores one interval and closes the previous minute when iv ends in a new one.
@@ -78,6 +90,9 @@ func (c *Collector) Record(ctx context.Context, iv usage.Interval) error {
 		}
 		c.minute.add(iv)
 	}
+	if err := c.episodes.observe(ctx, iv); err != nil {
+		return err
+	}
 	if !iv.End.Before(c.nextPrune) {
 		if err := c.sink.Prune(ctx, iv.End); err != nil {
 			return err
@@ -87,9 +102,9 @@ func (c *Collector) Record(ctx context.Context, iv usage.Interval) error {
 	return nil
 }
 
-// Close closes the partial minute in progress.
+// Close closes the partial minute and the episode in progress.
 func (c *Collector) Close(ctx context.Context) error {
-	return c.flushMinute(ctx)
+	return errors.Join(c.episodes.end(ctx), c.flushMinute(ctx))
 }
 
 func (c *Collector) flushMinute(ctx context.Context) error {
