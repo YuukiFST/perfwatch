@@ -87,40 +87,10 @@ func TestServe(t *testing.T) {
 	golden.WriteString("(the page and its assets are checked for network references, not diffed)\n")
 
 	// The API, at fixed times so the answers hold on any day.
-	writeJSON := func(v any) {
-		b, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			t.Fatal(err)
-		}
-		golden.Write(b)
-		golden.WriteString("\n")
-	}
+	writeJSON := func(v any) { writeIndentedJSON(t, &golden, v) }
 	timeline := func(query string) {
 		_, body := get("/api/timeline"+query, "")
-		var rest map[string]any
-		var series struct {
-			TS  []int64    `json:"ts"`
-			CPU []*float64 `json:"cpu"`
-			RAM []*float64 `json:"ram"`
-		}
-		if err := errors.Join(json.Unmarshal(body, &rest), json.Unmarshal(body, &series)); err != nil {
-			t.Fatalf("timeline%s: %v\n%s", query, err, body)
-		}
-		delete(rest, "ts")
-		delete(rest, "cpu")
-		delete(rest, "ram")
-		writeJSON(rest)
-		// One line per bucket with a sample, so gaps read as jumps in the start times.
-		sampled := 0
-		var rows strings.Builder
-		for i, ts := range series.TS {
-			if series.CPU[i] == nil {
-				continue
-			}
-			sampled++
-			fmt.Fprintf(&rows, "%s cpu %v ram %v\n", time.Unix(ts, 0).UTC().Format("15:04:05"), *series.CPU[i], *series.RAM[i])
-		}
-		fmt.Fprintf(&golden, "buckets: %d, with samples: %d\n%s", len(series.TS), sampled, rows.String())
+		writeTimelineGolden(t, &golden, body)
 	}
 	timeline("")                                                   // the last 24 h, from the minute rollups
 	timeline("?from=2026-03-02T09:02:50Z&to=2026-03-02T09:03:50Z") // 1 s buckets
@@ -129,28 +99,7 @@ func TestServe(t *testing.T) {
 	timeline("?from=2026-03-01T16:30:30Z&to=2026-03-02T09:10:30Z")
 
 	_, body := get("/api/episodes/1", "")
-	var detail struct {
-		Episode json.RawMessage `json:"episode"`
-		Seconds struct {
-			TS           []float64 `json:"ts"`
-			CPU          []float64 `json:"cpu"`
-			RAM          []float64 `json:"ram"`
-			Unattributed []float64 `json:"unattributed"`
-		} `json:"seconds"`
-	}
-	if err := json.Unmarshal(body, &detail); err != nil {
-		t.Fatalf("episode 1: %v\n%s", err, body)
-	}
-	var episode any
-	if err := json.Unmarshal(detail.Episode, &episode); err != nil {
-		t.Fatal(err)
-	}
-	writeJSON(episode)
-	s := detail.Seconds
-	for i, ts := range s.TS {
-		end := time.UnixMilli(int64(ts * 1000)).UTC().Format("15:04:05")
-		fmt.Fprintf(&golden, "%s cpu %v ram %v unattributed %v\n", end, s.CPU[i], s.RAM[i], s.Unattributed[i])
-	}
+	writeEpisodeGolden(t, &golden, body)
 
 	for _, path := range []string{
 		"/api/ranking?from=2026-03-02T09:00:00Z&to=2026-03-02T09:10:00Z&peaks_only=true",
@@ -174,4 +123,70 @@ func TestServe(t *testing.T) {
 	golden.Write(bytes.ReplaceAll(body, []byte(m[1]), []byte("<port>")))
 
 	assertGolden(t, "serve", golden.String())
+}
+
+func writeIndentedJSON(t *testing.T, w *strings.Builder, v any) {
+	t.Helper()
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Write(b)
+	w.WriteString("\n")
+}
+
+// writeTimelineGolden writes a timeline answer with one line per bucket that has a sample, so
+// gaps read as jumps in the start times.
+func writeTimelineGolden(t *testing.T, w *strings.Builder, body []byte) {
+	t.Helper()
+	var rest map[string]any
+	var series struct {
+		TS  []int64    `json:"ts"`
+		CPU []*float64 `json:"cpu"`
+		RAM []*float64 `json:"ram"`
+	}
+	if err := errors.Join(json.Unmarshal(body, &rest), json.Unmarshal(body, &series)); err != nil {
+		t.Fatalf("timeline: %v\n%s", err, body)
+	}
+	delete(rest, "ts")
+	delete(rest, "cpu")
+	delete(rest, "ram")
+	writeIndentedJSON(t, w, rest)
+	sampled := 0
+	var rows strings.Builder
+	for i, ts := range series.TS {
+		if series.CPU[i] == nil {
+			continue
+		}
+		sampled++
+		fmt.Fprintf(&rows, "%s cpu %v ram %v\n", time.Unix(ts, 0).UTC().Format("15:04:05"), *series.CPU[i], *series.RAM[i])
+	}
+	fmt.Fprintf(w, "buckets: %d, with samples: %d\n%s", len(series.TS), sampled, rows.String())
+}
+
+// writeEpisodeGolden writes an episode detail with one line per stored sample.
+func writeEpisodeGolden(t *testing.T, w *strings.Builder, body []byte) {
+	t.Helper()
+	var detail struct {
+		Episode json.RawMessage `json:"episode"`
+		Seconds struct {
+			TS           []float64 `json:"ts"`
+			CPU          []float64 `json:"cpu"`
+			RAM          []float64 `json:"ram"`
+			Unattributed []float64 `json:"unattributed"`
+		} `json:"seconds"`
+	}
+	if err := json.Unmarshal(body, &detail); err != nil {
+		t.Fatalf("episode: %v\n%s", err, body)
+	}
+	var episode any
+	if err := json.Unmarshal(detail.Episode, &episode); err != nil {
+		t.Fatal(err)
+	}
+	writeIndentedJSON(t, w, episode)
+	s := detail.Seconds
+	for i, ts := range s.TS {
+		end := time.UnixMilli(int64(ts * 1000)).UTC().Format("15:04:05")
+		fmt.Fprintf(w, "%s cpu %v ram %v unattributed %v\n", end, s.CPU[i], s.RAM[i], s.Unattributed[i])
+	}
 }
