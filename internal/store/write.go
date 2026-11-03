@@ -233,6 +233,7 @@ func (db *DB) Prune(ctx context.Context, now time.Time) error {
 		{"DELETE FROM system_minutes WHERE minute < ?", MinutesRetention},
 		{"DELETE FROM program_minutes WHERE minute < ?", ProgramMinutesRetention},
 		{"DELETE FROM episodes WHERE end_ts IS NOT NULL AND end_ts < ?", EpisodesRetention},
+		{"DELETE FROM agent_actions WHERE coalesce(end_ts, start_ts) < ?", AgentActionsRetention},
 	}
 	for _, step := range steps {
 		if _, err := tx.ExecContext(ctx, step.query, now.Add(-step.age).UnixMilli()); err != nil {
@@ -242,9 +243,14 @@ func (db *DB) Prune(ctx context.Context, now time.Time) error {
 	if _, err := tx.ExecContext(ctx, db.unusedPrograms); err != nil {
 		return fmt.Errorf("prune programs: %w", err)
 	}
+	_, err = tx.ExecContext(ctx, "DELETE FROM processes WHERE NOT EXISTS (SELECT 1 FROM episode_processes WHERE process_id = processes.id)")
+	if err != nil {
+		return fmt.Errorf("prune processes: %w", err)
+	}
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("prune: %w", err)
 	}
 	clear(db.programIDs)
+	clear(db.processIDs)
 	return nil
 }

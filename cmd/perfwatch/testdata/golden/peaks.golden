@@ -10,6 +10,16 @@ Peak episodes, 2026-02-23 09:10 to 2026-03-02 09:10 UTC: 4
   System         2.0%     2.0%    1 MiB
   f01.exe        0.5%     0.5%   10 MiB
   f02.exe        0.5%     0.5%   20 MiB
+  By CPU, process by process:
+    stress.exe[3001]  avg CPU 75.0%, max CPU 75.0%, max RAM 20 MiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
+    System[4]  avg CPU 2.0%, max CPU 2.0%, max RAM 1 MiB
+    f12.exe[3112]  avg CPU 0.5%, max CPU 0.5%, max RAM 120 MiB
+  By RAM, process by process:
+    big.exe[3004]  avg CPU 0.0%, max CPU 0.0%, max RAM 3.0 GiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
 
 2026-03-02 09:03:09 to 09:03:13, 4s, CPU peak: CPU max 85.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
   PROGRAM     AVG CPU  MAX CPU  MAX RAM
@@ -18,6 +28,16 @@ Peak episodes, 2026-02-23 09:10 to 2026-03-02 09:10 UTC: 4
   System         2.0%     2.0%    1 MiB
   f01.exe        0.5%     0.5%   10 MiB
   f02.exe        0.5%     0.5%   20 MiB
+  By CPU, process by process:
+    stress.exe[3001]  avg CPU 62.5%, max CPU 65.0%, max RAM 20 MiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
+    System[4]  avg CPU 2.0%, max CPU 2.0%, max RAM 1 MiB
+    f12.exe[3112]  avg CPU 0.5%, max CPU 0.5%, max RAM 120 MiB
+  By RAM, process by process:
+    big.exe[3004]  avg CPU 0.0%, max CPU 0.0%, max RAM 3.0 GiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
 
 2026-03-02 09:02:34 to 09:02:39, 5s, RAM peak: CPU max 20.0%, RAM max 93.0%, unattributed 2.0% on average, 5s pre-roll
   PROGRAM     AVG CPU  MAX CPU  MAX RAM
@@ -26,6 +46,16 @@ Peak episodes, 2026-02-23 09:10 to 2026-03-02 09:10 UTC: 4
   f01.exe        0.5%     0.5%   10 MiB
   f02.exe        0.5%     0.5%   20 MiB
   f03.exe        0.5%     0.5%   30 MiB
+  By CPU, process by process:
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
+    System[4]  avg CPU 2.0%, max CPU 2.0%, max RAM 1 MiB
+    f12.exe[3112]  avg CPU 0.5%, max CPU 0.5%, max RAM 120 MiB
+    f11.exe[3111]  avg CPU 0.5%, max CPU 0.5%, max RAM 110 MiB
+  By RAM, process by process:
+    big.exe[3004]  avg CPU 0.0%, max CPU 0.0%, max RAM 3.0 GiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
 
 2026-03-02 09:00:52 to 09:01:19, 27s, CPU peak: CPU max 95.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
   PROGRAM     AVG CPU  MAX CPU  MAX RAM
@@ -34,6 +64,16 @@ Peak episodes, 2026-02-23 09:10 to 2026-03-02 09:10 UTC: 4
   System         2.0%     2.0%    1 MiB
   f01.exe        0.5%     0.5%   10 MiB
   f02.exe        0.5%     0.5%   20 MiB
+  By CPU, process by process:
+    stress.exe[3001]  avg CPU 63.3%, max CPU 75.0%, max RAM 20 MiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
+    System[4]  avg CPU 2.0%, max CPU 2.0%, max RAM 1 MiB
+    f12.exe[3112]  avg CPU 0.5%, max CPU 0.5%, max RAM 120 MiB
+  By RAM, process by process:
+    big.exe[3004]  avg CPU 0.0%, max CPU 0.0%, max RAM 3.0 GiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
 --- stderr
 
 $ perfwatch peaks --json
@@ -85,6 +125,82 @@ exit: 0
           "cpu_max_percent": 0.5,
           "private_max_bytes": 20971520
         }
+      ],
+      "cpu_processes": [
+        {
+          "pid": 3001,
+          "name": "stress.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 75,
+          "cpu_max_percent": 75,
+          "private_max_bytes": 20971520
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        },
+        {
+          "pid": 4,
+          "name": "System",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "pid": 3112,
+          "name": "f12.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 125829120
+        }
+      ],
+      "ram_processes": [
+        {
+          "pid": 3004,
+          "name": "big.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0,
+          "cpu_max_percent": 0,
+          "private_max_bytes": 3221225472
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        }
       ]
     },
     {
@@ -128,6 +244,82 @@ exit: 0
           "cpu_avg_percent": 0.5,
           "cpu_max_percent": 0.5,
           "private_max_bytes": 20971520
+        }
+      ],
+      "cpu_processes": [
+        {
+          "pid": 3001,
+          "name": "stress.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 62.5,
+          "cpu_max_percent": 65,
+          "private_max_bytes": 20971520
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        },
+        {
+          "pid": 4,
+          "name": "System",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "pid": 3112,
+          "name": "f12.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 125829120
+        }
+      ],
+      "ram_processes": [
+        {
+          "pid": 3004,
+          "name": "big.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0,
+          "cpu_max_percent": 0,
+          "private_max_bytes": 3221225472
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
         }
       ]
     },
@@ -173,6 +365,82 @@ exit: 0
           "cpu_max_percent": 0.5,
           "private_max_bytes": 31457280
         }
+      ],
+      "cpu_processes": [
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        },
+        {
+          "pid": 4,
+          "name": "System",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "pid": 3112,
+          "name": "f12.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 125829120
+        },
+        {
+          "pid": 3111,
+          "name": "f11.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 115343360
+        }
+      ],
+      "ram_processes": [
+        {
+          "pid": 3004,
+          "name": "big.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0,
+          "cpu_max_percent": 0,
+          "private_max_bytes": 3221225472
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        }
       ]
     },
     {
@@ -217,6 +485,82 @@ exit: 0
           "cpu_max_percent": 0.5,
           "private_max_bytes": 20971520
         }
+      ],
+      "cpu_processes": [
+        {
+          "pid": 3001,
+          "name": "stress.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 63.26,
+          "cpu_max_percent": 75,
+          "private_max_bytes": 20971520
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        },
+        {
+          "pid": 4,
+          "name": "System",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "pid": 3112,
+          "name": "f12.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 125829120
+        }
+      ],
+      "ram_processes": [
+        {
+          "pid": 3004,
+          "name": "big.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0,
+          "cpu_max_percent": 0,
+          "private_max_bytes": 3221225472
+        },
+        {
+          "pid": 3002,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 419430400
+        },
+        {
+          "pid": 3003,
+          "name": "chrome.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 5,
+          "cpu_max_percent": 5,
+          "private_max_bytes": 314572800
+        }
       ]
     }
   ]
@@ -235,6 +579,16 @@ Peak episodes, 2026-03-02 09:03 to 2026-03-02 09:10 UTC: 2
   System         2.0%     2.0%    1 MiB
   f01.exe        0.5%     0.5%   10 MiB
   f02.exe        0.5%     0.5%   20 MiB
+  By CPU, process by process:
+    stress.exe[3001]  avg CPU 75.0%, max CPU 75.0%, max RAM 20 MiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
+    System[4]  avg CPU 2.0%, max CPU 2.0%, max RAM 1 MiB
+    f12.exe[3112]  avg CPU 0.5%, max CPU 0.5%, max RAM 120 MiB
+  By RAM, process by process:
+    big.exe[3004]  avg CPU 0.0%, max CPU 0.0%, max RAM 3.0 GiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
 
 2026-03-02 09:03:09 to 09:03:13, 4s, CPU peak: CPU max 85.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
   PROGRAM     AVG CPU  MAX CPU  MAX RAM
@@ -243,5 +597,15 @@ Peak episodes, 2026-03-02 09:03 to 2026-03-02 09:10 UTC: 2
   System         2.0%     2.0%    1 MiB
   f01.exe        0.5%     0.5%   10 MiB
   f02.exe        0.5%     0.5%   20 MiB
+  By CPU, process by process:
+    stress.exe[3001]  avg CPU 62.5%, max CPU 65.0%, max RAM 20 MiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
+    System[4]  avg CPU 2.0%, max CPU 2.0%, max RAM 1 MiB
+    f12.exe[3112]  avg CPU 0.5%, max CPU 0.5%, max RAM 120 MiB
+  By RAM, process by process:
+    big.exe[3004]  avg CPU 0.0%, max CPU 0.0%, max RAM 3.0 GiB
+    chrome.exe[3002]  avg CPU 5.0%, max CPU 5.0%, max RAM 400 MiB
+    chrome.exe[3003]  avg CPU 5.0%, max CPU 5.0%, max RAM 300 MiB
 --- stderr
 

@@ -8,6 +8,8 @@ Commands:
   run        sample CPU and RAM every second until interrupted
   top        rank the programs that used the most CPU and RAM
   peaks      list the peak episodes and who caused them
+  actions    list a coding agent's tool calls with the CPU and RAM each used
+  hook       record one tool call from a Claude Code hook on stdin
   serve      serve the dashboard on 127.0.0.1
   export     write the dashboard of a range to one HTML file
   install    start the collector now and at every logon

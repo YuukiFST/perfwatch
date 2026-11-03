@@ -98,12 +98,49 @@ CREATE INDEX episode_programs_by_program ON episode_programs (program_id);
 -- Rows stored before this column existed read 0 and count as no capacity.
 ALTER TABLE episode_seconds ADD COLUMN capacity_ticks INTEGER NOT NULL DEFAULT 0;
 `,
+	`
+-- One process instance an episode sample named, with what it ran and who started it. ancestry
+-- is the running parent chain when first stored, oldest first, as name[pid] joined by " > ".
+CREATE TABLE processes (
+	id           INTEGER PRIMARY KEY,
+	pid          INTEGER NOT NULL,
+	create_time  INTEGER NOT NULL,
+	name         TEXT NOT NULL,
+	command_line TEXT NOT NULL DEFAULT '',
+	ancestry     TEXT NOT NULL DEFAULT '',
+	UNIQUE (pid, create_time)
+);
+CREATE TABLE episode_processes (
+	episode_id    INTEGER NOT NULL REFERENCES episodes (id) ON DELETE CASCADE,
+	ts            INTEGER NOT NULL,
+	process_id    INTEGER NOT NULL REFERENCES processes (id),
+	cpu_pct       REAL NOT NULL,
+	private_bytes INTEGER NOT NULL,
+	PRIMARY KEY (episode_id, ts, process_id)
+) WITHOUT ROWID;
+CREATE INDEX episode_processes_by_process ON episode_processes (process_id);
+-- One tool call of a coding agent, from its PreToolUse and PostToolUse hooks, which may arrive
+-- in either order; a timestamp stays NULL until its hook arrives.
+CREATE TABLE agent_actions (
+	tool_use_id TEXT PRIMARY KEY,
+	session_id  TEXT NOT NULL,
+	tool        TEXT NOT NULL,
+	command     TEXT NOT NULL,
+	cwd         TEXT NOT NULL DEFAULT '',
+	background  INTEGER NOT NULL DEFAULT 0,
+	start_ts    INTEGER,
+	end_ts      INTEGER,
+	failed      INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX agent_actions_by_start ON agent_actions (start_ts);
+`,
 }
 
 // DB is an open perfwatch database.
 type DB struct {
 	sql        *sql.DB
 	programIDs map[usage.ProgramKey]programRow
+	processIDs map[processKey]int64
 	// unusedPrograms deletes programs no table references; built from the schema's foreign keys.
 	unusedPrograms string
 }
@@ -136,7 +173,7 @@ func Open(ctx context.Context, path string) (*DB, error) {
 		sqlDB.Close()
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
-	return &DB{sql: sqlDB, programIDs: map[usage.ProgramKey]programRow{}, unusedPrograms: unused}, nil
+	return &DB{sql: sqlDB, programIDs: map[usage.ProgramKey]programRow{}, processIDs: map[processKey]int64{}, unusedPrograms: unused}, nil
 }
 
 // migrate applies each pending migration under BEGIN IMMEDIATE and re-reads user_version

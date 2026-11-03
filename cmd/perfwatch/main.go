@@ -13,7 +13,7 @@ import (
 func main() {
 	// On Windows, Go delivers console close, logoff and shutdown as SIGTERM.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	code := cli.Main(ctx, os.Args[1:], cli.Streams{Stdout: os.Stdout, Stderr: os.Stderr})
+	code := cli.Main(ctx, os.Args[1:], cli.Streams{Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr})
 	stop()
 	os.Exit(code)
 }

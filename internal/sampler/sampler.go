@@ -39,6 +39,7 @@ type Process struct {
 	CreateTime   int64  `json:"create_time"` // opaque start stamp; FILETIME ticks on Windows
 	Name         string `json:"name"`
 	Path         string `json:"path,omitempty"`          // empty when the process denies access
+	CommandLine  string `json:"command_line,omitempty"`  // empty when the process denies access
 	ServiceGroup string `json:"service_group,omitempty"` // the -k group of a svchost.exe instance
 	CPUTicks     uint64 `json:"cpu_ticks"`               // kernel + user time, cumulative
 	PrivateBytes uint64 `json:"private_bytes"`           // private working set

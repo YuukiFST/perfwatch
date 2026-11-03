@@ -26,7 +26,9 @@ The service runs as LocalSystem, so it runs a copy in `%ProgramFiles%\perfwatch`
 | `perfwatch install [--service]`, `perfwatch uninstall` | Start the collector now and at every logon, or stop it and its autostart; see Install. |
 | `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl] [--data-dir dir]` | Sample CPU and RAM every second until interrupted; what autostart runs. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system, into the directory `PERFWATCH_DATA_DIR` or `--data-dir` names. |
 | `perfwatch top [--since 24h] [--peaks-only] [--limit 20] [--json]` | Rank the programs by CPU time over the range: CPU-seconds, average and maximum CPU, maximum private RAM, instances. `--peaks-only` counts only the seconds inside peak episodes. |
-| `perfwatch peaks [--since 7d] [--json]` | List the peak episodes in the range, newest first, with their maximum CPU and RAM, unattributed CPU, pre-roll and top programs. |
+| `perfwatch peaks [--since 7d] [--json]` | List the peak episodes in the range, newest first, with their maximum CPU and RAM, unattributed CPU, pre-roll and top programs, then the process instances behind them with who started each and its command line, and the coding agent's tool calls during each. |
+| `perfwatch actions [--since 24h] [--sort time\|cpu\|ram] [--limit 50] [--json]` | List a coding agent's tool calls with the machine's average and maximum CPU, maximum RAM and RAM growth over each, and the peak episode each overlaps. `--sort cpu` puts the calls that drove CPU highest first, `--sort ram` those that grew RAM most. |
+| `perfwatch hook` | Record one tool call from a Claude Code hook's JSON on stdin; see Coding agent actions. |
 | `perfwatch serve [--port 7313]` | Serve the dashboard on `http://127.0.0.1:7313/`, loopback only, until Ctrl+C. |
 | `perfwatch export --html report.html [--since 7d]` | Write the dashboard of the range to one HTML file that opens from disk, with no server and no network. |
 | `perfwatch version` | Print the version. |
@@ -53,6 +55,8 @@ The service runs as LocalSystem, so it runs a copy in `%ProgramFiles%\perfwatch`
 | Machine rollups: average, maximum, p95 | 1 min | 1 year |
 | Per-program CPU-seconds, max CPU, max private RAM, instances: the top 20 by CPU plus the top 20 by RAM | 1 min | 90 days |
 | Peak episodes: machine usage and the top 10 programs by CPU plus the top 10 by private RAM, from 30 s before the start until the episode cools down | 1 s | 180 days after the end |
+| Peak episodes: the top 10 process instances by CPU plus the top 10 by private RAM, each with its command line and running parent chain | 1 s | 180 days after the end |
+| Coding agent tool calls: tool, command, start and end | per call | 180 days after the end |
 
 Retention runs when `run` starts and once an hour after.
 An interval longer than 5 s (the machine slept or the collector was stopped) is not stored, so it shows as a gap.
@@ -77,6 +81,34 @@ start_samples = 3
 end_samples = 10
 preroll_seconds = 30
 ```
+
+## Coding agent actions
+
+A program name says `node.exe` used the CPU, not which command.
+Two records answer that.
+
+- Every process instance a peak episode names keeps its command line and the running processes that started it, as in `claude.exe[100] > bash.exe[200] > node.exe`.
+  A process run by another account, such as a `svchost.exe`, denies its command line to a collector that is not elevated.
+- `perfwatch hook`, registered as a Claude Code hook, records each tool call: the tool, its command (or its input as JSON for tools without one), when it started and when it returned.
+  `perfwatch actions` then shows what the machine did during each call, and `perfwatch peaks` lists the calls during each episode.
+  A shell tool's command is not on any command line Claude Code starts for the PowerShell tool, so only the hook records it.
+
+Register the hook in `~/.claude/settings.json` for every tool, with the path of your `perfwatch.exe`; `async` keeps it from delaying the agent:
+
+```json
+{
+  "hooks": {
+    "PreToolUse":         [{ "matcher": "", "hooks": [{ "type": "command", "command": "C:\\path\\to\\perfwatch.exe", "args": ["hook"], "async": true }] }],
+    "PostToolUse":        [{ "matcher": "", "hooks": [{ "type": "command", "command": "C:\\path\\to\\perfwatch.exe", "args": ["hook"], "async": true }] }],
+    "PostToolUseFailure": [{ "matcher": "", "hooks": [{ "type": "command", "command": "C:\\path\\to\\perfwatch.exe", "args": ["hook"], "async": true }] }]
+  }
+}
+```
+
+The hook writes to the same data directory as the collector, so it uses `PERFWATCH_DATA_DIR` too.
+A call whose end never arrives is shown as `open`, and its usage is read up to 10 minutes after its start.
+A call run in the background returns at once, so its own window is short; its processes still show in `peaks`.
+Processes that start and exit within one second still count as unattributed CPU.
 
 ## Dashboard
 
