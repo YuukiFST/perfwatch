@@ -104,15 +104,16 @@ func (l *Live) parseProcesses(now time.Time) ([]Process, error) {
 		if pid := uint32(info.UniqueProcessID); pid != 0 {
 			id := l.identities.lookup(pid, info.CreateTime, &info.ImageName)
 			procs = append(procs, Process{
-				PID:          pid,
-				ParentPID:    uint32(info.InheritedFromUniqueProcessID),
-				CreateTime:   info.CreateTime,
-				Name:         id.name,
-				Path:         id.path,
-				ServiceGroup: id.serviceGroup,
-				CPUTicks:     uint64(info.KernelTime) + uint64(info.UserTime),
-				PrivateBytes: uint64(info.WorkingSetPrivateSize),
-				CommitBytes:  uint64(info.PagefileUsage),
+				PID:             pid,
+				ParentPID:       uint32(info.InheritedFromUniqueProcessID),
+				CreateTime:      info.CreateTime,
+				Name:            id.name,
+				Path:            id.path,
+				ServiceGroup:    id.serviceGroup,
+				CPUTicks:        uint64(info.KernelTime) + uint64(info.UserTime),
+				PrivateBytes:    uint64(info.WorkingSetPrivateSize),
+				CommitBytes:     uint64(info.PagefileUsage),
+				WorkingSetBytes: uint64(info.WorkingSetSize),
 			})
 		}
 		if info.NextEntryOffset == 0 {

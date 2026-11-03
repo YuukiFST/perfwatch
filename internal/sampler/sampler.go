@@ -43,6 +43,8 @@ type Process struct {
 	CPUTicks     uint64 `json:"cpu_ticks"`               // kernel + user time, cumulative
 	PrivateBytes uint64 `json:"private_bytes"`           // private working set
 	CommitBytes  uint64 `json:"commit_bytes"`
+	// WorkingSetBytes is the whole working set, shared pages included; perfwatch reads it for its own budget.
+	WorkingSetBytes uint64 `json:"working_set_bytes,omitempty"`
 }
 
 // Sampler yields snapshots in time order.
