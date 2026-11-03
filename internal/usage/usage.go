@@ -3,6 +3,7 @@ package usage
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -48,6 +49,18 @@ type ProgramUsage struct {
 	CommitBytes  uint64  // at the end of the interval
 }
 
+// ProcessUsage is one process instance over an interval.
+type ProcessUsage struct {
+	PID          uint32
+	ParentPID    uint32
+	CreateTime   int64
+	Name         string
+	CommandLine  string
+	CPUTicks     uint64
+	CPUPercent   float64 // share of the whole machine
+	PrivateBytes uint64  // at the end of the interval
+}
+
 // Interval is the usage between two snapshots.
 type Interval struct {
 	Start time.Time
@@ -64,6 +77,8 @@ type Interval struct {
 	RAMPercent          float64
 	RAMUsedBytes        uint64
 	Programs            []ProgramUsage // CPU descending, then label
+	Processes           []ProcessUsage // every instance in cur, in snapshot order
+	byPID               map[uint32]int // index into Processes
 }
 
 type instance struct {
@@ -82,9 +97,14 @@ func Between(prev, cur sampler.Snapshot) (iv Interval, ok bool) {
 	if capacity == 0 {
 		return Interval{}, false
 	}
-	programs, attributed := sumPrograms(prev.Processes, cur.Processes)
+	programs, processes, attributed := sumPrograms(prev.Processes, cur.Processes)
 	for i := range programs {
 		programs[i].CPUPercent = percent(programs[i].CPUTicks, capacity)
+	}
+	byPID := make(map[uint32]int, len(processes))
+	for i := range processes {
+		processes[i].CPUPercent = percent(processes[i].CPUTicks, capacity)
+		byPID[processes[i].PID] = i
 	}
 	unattributed := uint64(0)
 	if busy > attributed {
@@ -102,17 +122,45 @@ func Between(prev, cur sampler.Snapshot) (iv Interval, ok bool) {
 		RAMPercent:          percent(used, cur.Memory.TotalBytes),
 		RAMUsedBytes:        used,
 		Programs:            programs,
+		Processes:           processes,
+		byPID:               byPID,
 	}, true
 }
 
-// sumPrograms groups the processes of cur by Program. A process absent from prev started
-// after it, so all of its CPU time falls inside the interval.
-func sumPrograms(prev, cur []sampler.Process) (programs []ProgramUsage, attributed uint64) {
+// maxAncestors bounds the walk up the parent chain.
+const maxAncestors = 16
+
+// Ancestry names the running ancestors of Processes[i], oldest first, as name[pid] joined by
+// " > ". A parent PID whose current owner started after the child names a reused PID, not the
+// parent, so the walk stops there.
+func (iv Interval) Ancestry(i int) string {
+	var chain []string
+	child := iv.Processes[i]
+	for range maxAncestors {
+		j, ok := iv.byPID[child.ParentPID]
+		if !ok || child.ParentPID == child.PID {
+			break
+		}
+		parent := iv.Processes[j]
+		if parent.CreateTime > child.CreateTime {
+			break
+		}
+		chain = append(chain, fmt.Sprintf("%s[%d]", parent.Name, parent.PID))
+		child = parent
+	}
+	slices.Reverse(chain)
+	return strings.Join(chain, " > ")
+}
+
+// sumPrograms groups the processes of cur by Program and lists each instance. A process absent
+// from prev started after it, so all of its CPU time falls inside the interval.
+func sumPrograms(prev, cur []sampler.Process) (programs []ProgramUsage, processes []ProcessUsage, attributed uint64) {
 	before := make(map[instance]uint64, len(prev))
 	for _, p := range prev {
 		before[instance{p.PID, p.CreateTime}] = p.CPUTicks
 	}
 	index := map[ProgramKey]int{}
+	processes = make([]ProcessUsage, 0, len(cur))
 	for _, p := range cur {
 		delta := p.CPUTicks
 		if start, seen := before[instance{p.PID, p.CreateTime}]; seen {
@@ -122,6 +170,10 @@ func sumPrograms(prev, cur []sampler.Process) (programs []ProgramUsage, attribut
 			}
 		}
 		attributed += delta
+		processes = append(processes, ProcessUsage{
+			PID: p.PID, ParentPID: p.ParentPID, CreateTime: p.CreateTime, Name: p.Name,
+			CommandLine: p.CommandLine, CPUTicks: delta, PrivateBytes: p.PrivateBytes,
+		})
 		program := Program{Name: p.Name, Path: p.Path, ServiceGroup: p.ServiceGroup}
 		i, ok := index[program.Key()]
 		if !ok {
@@ -143,7 +195,7 @@ func sumPrograms(prev, cur []sampler.Process) (programs []ProgramUsage, attribut
 		}
 		return cmp.Compare(a.Label(), b.Label())
 	})
-	return programs, attributed
+	return programs, processes, attributed
 }
 
 func percent(part, whole uint64) float64 {

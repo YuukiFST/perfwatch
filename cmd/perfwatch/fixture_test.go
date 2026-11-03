@@ -24,6 +24,7 @@ type fixtureProcess struct {
 	CreateTime   int64  `json:"create_time"`
 	Name         string `json:"name"`
 	Path         string `json:"path,omitempty"`
+	CommandLine  string `json:"command_line,omitempty"`
 	ServiceGroup string `json:"service_group,omitempty"`
 	CPUTicks     uint64 `json:"cpu_ticks"`
 	PrivateBytes uint64 `json:"private_bytes"`

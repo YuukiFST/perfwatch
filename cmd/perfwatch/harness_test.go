@@ -48,7 +48,14 @@ type cliResult struct {
 // an entry in env overrides it.
 func runPerfwatch(t *testing.T, env []string, args ...string) cliResult {
 	t.Helper()
+	return runPerfwatchWithInput(t, env, "", args...)
+}
+
+// runPerfwatchWithInput is runPerfwatch with stdin reading input.
+func runPerfwatchWithInput(t *testing.T, env []string, input string, args ...string) cliResult {
+	t.Helper()
 	cmd := exec.Command(perfwatchBin, args...)
+	cmd.Stdin = strings.NewReader(input)
 	cmd.Env = append(append(os.Environ(), "PERFWATCH_DATA_DIR="+t.TempDir()), env...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr

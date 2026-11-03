@@ -15,6 +15,16 @@ import (
 // episodePrograms is how many programs each listed episode names.
 const episodePrograms = 5
 
+// episodeCPUProcesses and episodeRAMProcesses are how many process instances each listed
+// episode names by CPU and by private RAM.
+const (
+	episodeCPUProcesses = 5
+	episodeRAMProcesses = 3
+)
+
+// processCommandWidth is how many characters of a command line a peaks block shows.
+const processCommandWidth = 160
+
 type peaksJSON struct {
 	From     time.Time     `json:"from"`
 	To       time.Time     `json:"to"`
@@ -33,6 +43,20 @@ type episodeJSON struct {
 	RAMMaxPercent          float64              `json:"ram_max_percent"`
 	UnattributedAvgPercent float64              `json:"unattributed_avg_percent"`
 	Programs               []episodeProgramJSON `json:"programs"`
+	// Peaks fills the fields below; the dashboard leaves them out.
+	CPUProcesses []episodeProcessJSON `json:"cpu_processes,omitempty"`
+	RAMProcesses []episodeProcessJSON `json:"ram_processes,omitempty"`
+	Actions      []actionJSON         `json:"agent_actions,omitempty"`
+}
+
+type episodeProcessJSON struct {
+	PID             uint32  `json:"pid"`
+	Name            string  `json:"name"`
+	CommandLine     string  `json:"command_line"`
+	Ancestry        string  `json:"ancestry"`
+	CPUAvgPercent   float64 `json:"cpu_avg_percent"`
+	CPUMaxPercent   float64 `json:"cpu_max_percent"`
+	PrivateMaxBytes int64   `json:"private_max_bytes"`
 }
 
 type episodeProgramJSON struct {
@@ -68,7 +92,11 @@ func runPeaks(ctx context.Context, streams Streams, args []string) (err error) {
 	}
 	out := peaksJSON{From: from.In(loc), To: now.In(loc), Episodes: []episodeJSON{}}
 	for _, e := range episodes {
-		out.Episodes = append(out.Episodes, newEpisodeJSON(e, loc))
+		ej := newEpisodeJSON(e, loc)
+		if err := addEpisodeCauses(ctx, db, &ej, e, now, loc); err != nil {
+			return err
+		}
+		out.Episodes = append(out.Episodes, ej)
 	}
 	if *asJSON {
 		enc := json.NewEncoder(streams.Stdout)
@@ -95,6 +123,36 @@ func newEpisodeJSON(e store.Episode, loc *time.Location) episodeJSON {
 	return ej
 }
 
+// addEpisodeCauses fills in the process instances and agent tool calls behind episode e: the
+// calls whose window overlaps the episode, its pre-roll included.
+func addEpisodeCauses(ctx context.Context, db *store.DB, ej *episodeJSON, e store.Episode, now time.Time, loc *time.Location) error {
+	ej.CPUProcesses, ej.RAMProcesses, ej.Actions = []episodeProcessJSON{}, []episodeProcessJSON{}, []actionJSON{}
+	for _, list := range []struct {
+		dest  *[]episodeProcessJSON
+		byRAM bool
+		limit int
+	}{{&ej.CPUProcesses, false, episodeCPUProcesses}, {&ej.RAMProcesses, true, episodeRAMProcesses}} {
+		procs, err := db.EpisodeProcesses(ctx, e.ID, list.byRAM, list.limit)
+		if err != nil {
+			return err
+		}
+		for _, p := range procs {
+			*list.dest = append(*list.dest, episodeProcessJSON{
+				PID: p.PID, Name: p.Name, CommandLine: p.CommandLine, Ancestry: p.Ancestry,
+				CPUAvgPercent: round2(p.CPUAvgPercent), CPUMaxPercent: round2(p.CPUMaxPercent), PrivateMaxBytes: p.PrivateMaxBytes,
+			})
+		}
+	}
+	actions, err := db.AgentActions(ctx, e.PreRoll, e.End, now)
+	if err != nil {
+		return err
+	}
+	for _, a := range actions {
+		ej.Actions = append(ej.Actions, newActionJSON(a, loc))
+	}
+	return nil
+}
+
 // printPeaks writes one block per episode, newest first.
 func printPeaks(w io.Writer, out peaksJSON) {
 	fmt.Fprintf(w, "Peak episodes, %s to %s: %d\n", out.From.Format("2006-01-02 15:04"), out.To.Format("2006-01-02 15:04 MST"), len(out.Episodes))
@@ -112,6 +170,31 @@ func printPeaks(w io.Writer, out peaksJSON) {
 				fmt.Sprintf("%.1f%%", p.CPUMaxPercent), formatBytes(p.PrivateMaxBytes)})
 		}
 		printTable(w, rows)
+		printEpisodeProcesses(w, "By CPU", e.CPUProcesses)
+		printEpisodeProcesses(w, "By RAM", e.RAMProcesses)
+		if len(e.Actions) > 0 {
+			fmt.Fprintln(w, "  Agent tool calls during the episode and its pre-roll:")
+			printActionTable(w, "    ", e.Actions)
+		}
+	}
+}
+
+// printEpisodeProcesses writes each process instance with its usage, then who started it and
+// what it ran.
+func printEpisodeProcesses(w io.Writer, title string, procs []episodeProcessJSON) {
+	if len(procs) == 0 {
+		return
+	}
+	fmt.Fprintf(w, "  %s, process by process:\n", title)
+	for _, p := range procs {
+		fmt.Fprintf(w, "    %s[%d]  avg CPU %.1f%%, max CPU %.1f%%, max RAM %s\n",
+			p.Name, p.PID, p.CPUAvgPercent, p.CPUMaxPercent, formatBytes(p.PrivateMaxBytes))
+		if p.Ancestry != "" {
+			fmt.Fprintf(w, "      started by: %s\n", p.Ancestry)
+		}
+		if p.CommandLine != "" {
+			fmt.Fprintf(w, "      command: %s\n", oneLine(p.CommandLine, processCommandWidth))
+		}
 	}
 }
 

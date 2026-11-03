@@ -26,6 +26,7 @@ type instanceKey struct {
 type identity struct {
 	name          string
 	path          string
+	commandLine   string
 	serviceGroup  string
 	groupResolved bool
 	groupAttempts int
@@ -65,7 +66,8 @@ func (c *identityCache) lookup(pid uint32, createTime int64, imageName *windows.
 	key := instanceKey{pid: pid, createTime: createTime}
 	id, seen := c.byInstance[key]
 	if !seen {
-		id = &identity{name: imageName.String(), path: imagePath(pid, createTime)}
+		id = &identity{name: imageName.String()}
+		id.path, id.commandLine = imageDetails(pid, createTime)
 		id.groupResolved = !strings.EqualFold(id.name, "svchost.exe")
 		c.byInstance[key] = id
 	}
@@ -80,18 +82,23 @@ func (c *identityCache) lookup(pid uint32, createTime int64, imageName *windows.
 	return id
 }
 
-// imagePath returns the Win32 path of the process image, or "" when the process denies access
-// or the PID now belongs to a process other than the instance created at createTime.
-func imagePath(pid uint32, createTime int64) string {
+// imageDetails returns the Win32 path of the process image and its command line, each "" when
+// the process denies access or the PID now belongs to a process other than the instance created
+// at createTime.
+func imageDetails(pid uint32, createTime int64) (path, commandLine string) {
 	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	defer windows.CloseHandle(h)
 	var created, exited, kernel, user windows.Filetime
 	if err := windows.GetProcessTimes(h, &created, &exited, &kernel, &user); err != nil || filetimeTicks(created) != uint64(createTime) {
-		return ""
+		return "", ""
 	}
+	return imagePath(h), processCommandLine(h)
+}
+
+func imagePath(h windows.Handle) string {
 	for _, capacity := range []uint32{windows.MAX_PATH, windows.MAX_LONG_PATH} {
 		buf := make([]uint16, capacity)
 		size := capacity
@@ -102,6 +109,25 @@ func imagePath(pid uint32, createTime int64) string {
 		if !errors.Is(err, windows.ERROR_INSUFFICIENT_BUFFER) {
 			return ""
 		}
+	}
+	return ""
+}
+
+// processCommandLine reads ProcessCommandLineInformation (Windows 8.1 and later), which
+// PROCESS_QUERY_LIMITED_INFORMATION allows: a UNICODE_STRING followed by its characters.
+// https://learn.microsoft.com/en-us/windows/win32/procthread/zwqueryinformationprocess
+func processCommandLine(h windows.Handle) string {
+	buf := alignedBuffer(4 << 10)
+	for range 2 {
+		var needed uint32
+		err := windows.NtQueryInformationProcess(h, windows.ProcessCommandLineInformation, unsafe.Pointer(&buf[0]), uint32(len(buf)), &needed)
+		if err == nil {
+			return (*windows.NTUnicodeString)(unsafe.Pointer(&buf[0])).String()
+		}
+		if int(needed) <= len(buf) {
+			return ""
+		}
+		buf = alignedBuffer(int(needed))
 	}
 	return ""
 }

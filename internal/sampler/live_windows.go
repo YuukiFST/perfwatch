@@ -109,6 +109,7 @@ func (l *Live) parseProcesses(now time.Time) ([]Process, error) {
 				CreateTime:      info.CreateTime,
 				Name:            id.name,
 				Path:            id.path,
+				CommandLine:     id.commandLine,
 				ServiceGroup:    id.serviceGroup,
 				CPUTicks:        uint64(info.KernelTime) + uint64(info.UserTime),
 				PrivateBytes:    uint64(info.WorkingSetPrivateSize),

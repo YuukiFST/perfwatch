@@ -1,0 +1,340 @@
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 0
+--- stdout
+--- stderr
+
+$ perfwatch hook
+exit: 1
+--- stdout
+--- stderr
+perfwatch: hook event "Stop": want PreToolUse, PostToolUse or PostToolUseFailure
+
+$ perfwatch hook
+exit: 1
+--- stdout
+--- stderr
+perfwatch: hook input has no tool_use_id or tool_name
+
+$ perfwatch hook
+exit: 1
+--- stdout
+--- stderr
+perfwatch: hook input is not JSON: invalid character 'o' in literal null (expecting 'u')
+
+$ perfwatch hook
+exit: 1
+--- stdout
+--- stderr
+perfwatch: hook input is not JSON: unexpected end of JSON input
+
+$ perfwatch actions
+exit: 0
+--- stdout
+Agent tool calls, 2026-03-01 09:05 to 2026-03-02 09:05 UTC: 5
+
+START                 TIME  AVG CPU  MAX CPU  MAX RAM  RAM GROWTH  PEAK  ACTION
+2026-03-02 09:01:35   open    20.0%    20.0%    50.0%       0 MiB        Bash: npm test -- --watch=false \n echo done
+2026-03-02 09:01:32  100ms    20.0%    20.0%    50.0%       0 MiB        Bash bg: npm run dev
+2026-03-02 09:01:30     1s    20.0%    20.0%    50.0%       0 MiB        PowerShell failed: Get-ChildItem -Recurse C:\missing
+2026-03-02 09:00:38    34s    86.2%    95.0%    80.0%    +4.8 GiB    #1  Bash: cd C:/work/app && npm run build
+2026-03-02 09:00:05  200ms    20.0%    20.0%    50.0%       0 MiB        Read: {"file_path":"C:\\work\\app\\package.json"}
+--- stderr
+
+$ perfwatch actions --sort cpu --limit 2
+exit: 0
+--- stdout
+Agent tool calls, 2026-03-01 09:05 to 2026-03-02 09:05 UTC: 5, the 2 first by cpu
+
+START                TIME  AVG CPU  MAX CPU  MAX RAM  RAM GROWTH  PEAK  ACTION
+2026-03-02 09:00:38   34s    86.2%    95.0%    80.0%    +4.8 GiB    #1  Bash: cd C:/work/app && npm run build
+2026-03-02 09:01:35  open    20.0%    20.0%    50.0%       0 MiB        Bash: npm test -- --watch=false \n echo done
+--- stderr
+
+$ perfwatch actions --sort ram --json --limit 1
+exit: 0
+--- stdout
+{
+  "from": "2026-03-01T09:05:00Z",
+  "to": "2026-03-02T09:05:00Z",
+  "sort": "ram",
+  "total": 5,
+  "actions": [
+    {
+      "tool_use_id": "toolu_build",
+      "session_id": "session-1",
+      "tool": "Bash",
+      "command": "cd C:/work/app \u0026\u0026 npm run build",
+      "cwd": "C:\\work\\app",
+      "background": false,
+      "failed": false,
+      "start": "2026-03-02T09:00:38Z",
+      "end": "2026-03-02T09:01:12Z",
+      "open": false,
+      "seconds": 34,
+      "samples": 34,
+      "cpu_avg_percent": 86.18,
+      "cpu_max_percent": 95,
+      "ram_max_percent": 80,
+      "ram_growth_bytes": 5153960756,
+      "episode_id": 1
+    }
+  ]
+}
+--- stderr
+
+$ perfwatch actions --since 1m
+exit: 0
+--- stdout
+Agent tool calls, 2026-03-02 09:04 to 2026-03-02 09:05 UTC: 1
+
+START                TIME  AVG CPU  MAX CPU  MAX RAM  RAM GROWTH  PEAK  ACTION
+2026-03-02 09:01:35  open    20.0%    20.0%    50.0%       0 MiB        Bash: npm test -- --watch=false \n echo done
+--- stderr
+
+$ perfwatch actions --sort disk
+exit: 2
+--- stdout
+--- stderr
+invalid -sort "disk" or -limit 50: want time, cpu or ram, and 1 or more
+Usage: perfwatch actions [flags]
+  -json
+    	print JSON instead of a table
+  -limit int
+    	show at most this many tool calls (default 50)
+  -since value
+    	list the tool calls of this much time back from now: 90m, 24h, 7d (default 24h)
+  -sort string
+    	order by time (newest first), cpu (highest machine CPU) or ram (most RAM growth) (default "time")
+
+$ perfwatch peaks
+exit: 0
+--- stdout
+Peak episodes, 2026-02-23 09:05 to 2026-03-02 09:05 UTC: 1
+
+2026-03-02 09:00:40 to 09:01:10, 30s, CPU peak: CPU max 95.0%, RAM max 80.0%, unattributed 7.8% on average, 30s pre-roll
+  PROGRAM      AVG CPU  MAX CPU  MAX RAM
+  node.exe       80.0%    80.0%  1.5 GiB
+  claude.exe      3.0%     3.0%  900 MiB
+  brave.exe       2.0%     2.0%  2.0 GiB
+  System          1.0%     1.0%    1 MiB
+  conhost.exe     0.7%     0.7%    2 MiB
+  By CPU, process by process:
+    node.exe[300]  avg CPU 80.0%, max CPU 80.0%, max RAM 1.5 GiB
+      started by: claude.exe[100] > bash.exe[200]
+      command: node C:\work\app\node_modules\vite\bin\vite.js build
+    claude.exe[100]  avg CPU 3.0%, max CPU 3.0%, max RAM 900 MiB
+      command: "C:\npm\claude.exe"
+    brave.exe[600]  avg CPU 2.0%, max CPU 2.0%, max RAM 2.0 GiB
+      command: "C:\Brave\brave.exe" --type=renderer
+    System[4]  avg CPU 1.0%, max CPU 1.0%, max RAM 1 MiB
+    conhost.exe[400]  avg CPU 0.7%, max CPU 0.7%, max RAM 2 MiB
+  By RAM, process by process:
+    brave.exe[600]  avg CPU 2.0%, max CPU 2.0%, max RAM 2.0 GiB
+      command: "C:\Brave\brave.exe" --type=renderer
+    node.exe[300]  avg CPU 80.0%, max CPU 80.0%, max RAM 1.5 GiB
+      started by: claude.exe[100] > bash.exe[200]
+      command: node C:\work\app\node_modules\vite\bin\vite.js build
+    claude.exe[100]  avg CPU 3.0%, max CPU 3.0%, max RAM 900 MiB
+      command: "C:\npm\claude.exe"
+  Agent tool calls during the episode and its pre-roll:
+    START                TIME  AVG CPU  MAX CPU  MAX RAM  RAM GROWTH  PEAK  ACTION
+    2026-03-02 09:00:38   34s    86.2%    95.0%    80.0%    +4.8 GiB    #1  Bash: cd C:/work/app && npm run build
+--- stderr
+
+$ perfwatch peaks --json
+exit: 0
+--- stdout
+{
+  "from": "2026-02-23T09:05:00Z",
+  "to": "2026-03-02T09:05:00Z",
+  "episodes": [
+    {
+      "id": 1,
+      "start": "2026-03-02T09:00:40Z",
+      "end": "2026-03-02T09:01:10Z",
+      "open": false,
+      "seconds": 30,
+      "preroll_seconds": 30,
+      "trigger": "cpu",
+      "cpu_max_percent": 95,
+      "ram_max_percent": 80,
+      "unattributed_avg_percent": 7.8,
+      "programs": [
+        {
+          "name": "node.exe",
+          "cpu_avg_percent": 80,
+          "cpu_max_percent": 80,
+          "private_max_bytes": 1610612736
+        },
+        {
+          "name": "claude.exe",
+          "cpu_avg_percent": 3,
+          "cpu_max_percent": 3,
+          "private_max_bytes": 943718400
+        },
+        {
+          "name": "brave.exe",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 2147483648
+        },
+        {
+          "name": "System",
+          "cpu_avg_percent": 1,
+          "cpu_max_percent": 1,
+          "private_max_bytes": 1048576
+        },
+        {
+          "name": "conhost.exe",
+          "cpu_avg_percent": 0.7,
+          "cpu_max_percent": 0.7,
+          "private_max_bytes": 2097152
+        }
+      ],
+      "cpu_processes": [
+        {
+          "pid": 300,
+          "name": "node.exe",
+          "command_line": "node C:\\work\\app\\node_modules\\vite\\bin\\vite.js build",
+          "ancestry": "claude.exe[100] \u003e bash.exe[200]",
+          "cpu_avg_percent": 80,
+          "cpu_max_percent": 80,
+          "private_max_bytes": 1610612736
+        },
+        {
+          "pid": 100,
+          "name": "claude.exe",
+          "command_line": "\"C:\\npm\\claude.exe\"",
+          "ancestry": "",
+          "cpu_avg_percent": 3,
+          "cpu_max_percent": 3,
+          "private_max_bytes": 943718400
+        },
+        {
+          "pid": 600,
+          "name": "brave.exe",
+          "command_line": "\"C:\\Brave\\brave.exe\" --type=renderer",
+          "ancestry": "",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 2147483648
+        },
+        {
+          "pid": 4,
+          "name": "System",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 1,
+          "cpu_max_percent": 1,
+          "private_max_bytes": 1048576
+        },
+        {
+          "pid": 400,
+          "name": "conhost.exe",
+          "command_line": "",
+          "ancestry": "",
+          "cpu_avg_percent": 0.7,
+          "cpu_max_percent": 0.7,
+          "private_max_bytes": 2097152
+        }
+      ],
+      "ram_processes": [
+        {
+          "pid": 600,
+          "name": "brave.exe",
+          "command_line": "\"C:\\Brave\\brave.exe\" --type=renderer",
+          "ancestry": "",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 2147483648
+        },
+        {
+          "pid": 300,
+          "name": "node.exe",
+          "command_line": "node C:\\work\\app\\node_modules\\vite\\bin\\vite.js build",
+          "ancestry": "claude.exe[100] \u003e bash.exe[200]",
+          "cpu_avg_percent": 80,
+          "cpu_max_percent": 80,
+          "private_max_bytes": 1610612736
+        },
+        {
+          "pid": 100,
+          "name": "claude.exe",
+          "command_line": "\"C:\\npm\\claude.exe\"",
+          "ancestry": "",
+          "cpu_avg_percent": 3,
+          "cpu_max_percent": 3,
+          "private_max_bytes": 943718400
+        }
+      ],
+      "agent_actions": [
+        {
+          "tool_use_id": "toolu_build",
+          "session_id": "session-1",
+          "tool": "Bash",
+          "command": "cd C:/work/app \u0026\u0026 npm run build",
+          "cwd": "C:\\work\\app",
+          "background": false,
+          "failed": false,
+          "start": "2026-03-02T09:00:38Z",
+          "end": "2026-03-02T09:01:12Z",
+          "open": false,
+          "seconds": 34,
+          "samples": 34,
+          "cpu_avg_percent": 86.18,
+          "cpu_max_percent": 95,
+          "ram_max_percent": 80,
+          "ram_growth_bytes": 5153960756,
+          "episode_id": 1
+        }
+      ]
+    }
+  ]
+}
+--- stderr
+

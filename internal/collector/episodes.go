@@ -15,6 +15,10 @@ import (
 // EpisodePrograms is how many programs an episode sample keeps by CPU, and again by private RAM.
 const EpisodePrograms = 10
 
+// EpisodeProcesses is how many process instances an episode sample keeps by CPU, and again by
+// private RAM.
+const EpisodeProcesses = 10
+
 // detector finds peak episodes in the stream of samples. Before an episode it keeps a ring of
 // the last PreRoll of samples, which becomes the episode's pre-roll when one starts.
 type detector struct {
@@ -134,7 +138,7 @@ func (d *detector) trigger() string {
 }
 
 // episodeSample keeps the EpisodePrograms programs with the most CPU (none with zero) plus the
-// EpisodePrograms with the most private RAM.
+// EpisodePrograms with the most private RAM, and the same of process instances.
 func episodeSample(iv usage.Interval) store.EpisodeSample {
 	s := store.EpisodeSample{
 		End: iv.End, Span: iv.End.Sub(iv.Start), CapacityTicks: iv.CapacityTicks,
@@ -159,5 +163,34 @@ func episodeSample(iv usage.Interval) store.EpisodeSample {
 			})
 		}
 	}
+	s.Processes = episodeProcesses(iv)
 	return s
+}
+
+func episodeProcesses(iv usage.Interval) []store.EpisodeProcess {
+	order := make([]int, len(iv.Processes))
+	for i := range order {
+		order[i] = i
+	}
+	keep := make([]bool, len(iv.Processes))
+	slices.SortStableFunc(order, func(a, b int) int { return cmp.Compare(iv.Processes[b].CPUTicks, iv.Processes[a].CPUTicks) })
+	for _, i := range order[:min(EpisodeProcesses, len(order))] {
+		keep[i] = iv.Processes[i].CPUTicks > 0
+	}
+	slices.SortStableFunc(order, func(a, b int) int {
+		return cmp.Compare(iv.Processes[b].PrivateBytes, iv.Processes[a].PrivateBytes)
+	})
+	for _, i := range order[:min(EpisodeProcesses, len(order))] {
+		keep[i] = true
+	}
+	var kept []store.EpisodeProcess
+	for i, p := range iv.Processes {
+		if keep[i] {
+			kept = append(kept, store.EpisodeProcess{
+				PID: p.PID, CreateTime: p.CreateTime, Name: p.Name, CommandLine: p.CommandLine,
+				Ancestry: iv.Ancestry(i), CPUPercent: p.CPUPercent, PrivateBytes: p.PrivateBytes,
+			})
+		}
+	}
+	return kept
 }

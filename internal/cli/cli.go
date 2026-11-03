@@ -10,8 +10,9 @@ import (
 	"io"
 )
 
-// Streams carries the writers a command prints to.
+// Streams carries what a command reads from and prints to.
 type Streams struct {
+	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
 }
@@ -37,6 +38,8 @@ func commands() []command {
 		{name: "run", summary: "sample CPU and RAM every second until interrupted", run: runRun},
 		{name: "top", summary: "rank the programs that used the most CPU and RAM", run: runTop},
 		{name: "peaks", summary: "list the peak episodes and who caused them", run: runPeaks},
+		{name: "actions", summary: "list a coding agent's tool calls with the CPU and RAM each used", run: runActions},
+		{name: "hook", summary: "record one tool call from a Claude Code hook on stdin", run: runHook},
 		{name: "serve", summary: "serve the dashboard on 127.0.0.1", run: runServe},
 		{name: "export", summary: "write the dashboard of a range to one HTML file", run: runExport},
 		{name: "install", summary: "start the collector now and at every logon", run: runInstall},
