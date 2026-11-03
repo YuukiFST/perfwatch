@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"path"
 	"strconv"
 	"time"
 
@@ -37,6 +38,14 @@ var timelineSteps = []time.Duration{
 	time.Hour, 2 * time.Hour, 3 * time.Hour, 6 * time.Hour, 12 * time.Hour, 24 * time.Hour,
 }
 
+// assetTypes are the content types of the embedded files; "/" serves index.html.
+var assetTypes = map[string]string{
+	"":      "text/html; charset=utf-8",
+	".html": "text/html; charset=utf-8",
+	".js":   "text/javascript; charset=utf-8",
+	".css":  "text/css; charset=utf-8",
+}
+
 type dashboard struct {
 	db    *store.DB
 	peaks config.Peaks
@@ -49,8 +58,15 @@ func newDashboard(db *store.DB, peaks config.Peaks, port int) http.Handler {
 	if err != nil {
 		panic(err) // the embedded tree always holds web
 	}
+	files := http.FileServerFS(static)
 	mux := http.NewServeMux()
-	mux.Handle("GET /", http.FileServerFS(static))
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		// Fixed here: Go otherwise takes them from the Windows registry, which varies by machine.
+		if ctype, ok := assetTypes[path.Ext(r.URL.Path)]; ok {
+			w.Header().Set("Content-Type", ctype)
+		}
+		files.ServeHTTP(w, r)
+	})
 	mux.HandleFunc("GET /api/timeline", d.timeline)
 	mux.HandleFunc("GET /api/ranking", d.ranking)
 	mux.HandleFunc("GET /api/episodes/{id}", d.episode)
