@@ -1,4 +1,4 @@
-episodes: 3
+episodes: 4
 episode trigger=cpu pre-roll from 2026-03-02T09:00:22Z, start 2026-03-02T09:00:52Z, end 2026-03-02T09:01:19Z (27s), 67 samples, 30 before the start
    -30s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
    -29s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
@@ -88,7 +88,7 @@ episode trigger=ram pre-roll from 2026-03-02T09:02:29Z, start 2026-03-02T09:02:3
    +12s cpu=20.0% ram=80.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
    +13s cpu=20.0% ram=80.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
    +14s cpu=20.0% ram=80.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
-episode trigger=cpu pre-roll from 2026-03-02T09:02:39Z, start 2026-03-02T09:03:09Z, end 2026-03-02T09:03:13Z (4s), 34 samples, 30 before the start
+episode trigger=cpu pre-roll from 2026-03-02T09:02:39Z, start 2026-03-02T09:03:09Z, end 2026-03-02T09:03:13Z (4s), 44 samples, 30 before the start
    -30s cpu=20.0% ram=80.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
    -29s cpu=20.0% ram=80.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
    -28s cpu=20.0% ram=80.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
@@ -119,6 +119,51 @@ episode trigger=cpu pre-roll from 2026-03-02T09:02:39Z, start 2026-03-02T09:03:0
     -3s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
     -2s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
     -1s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    +0s cpu=85.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 65.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+    +1s cpu=85.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 65.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+    +2s cpu=85.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 65.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+    +3s cpu=75.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 55.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+    +4s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    +5s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    +6s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    +7s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    +8s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    +9s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   +10s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   +11s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   +12s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   +13s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+episode trigger=cpu pre-roll from 2026-03-02T09:03:07Z, start 2026-03-02T09:03:37Z, end 2026-03-02T09:03:41Z (4s), 34 samples, 30 before the start
+   -30s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -29s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -28s cpu=85.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 65.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+   -27s cpu=85.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 65.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+   -26s cpu=85.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 65.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+   -25s cpu=75.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 55.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
+   -24s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -23s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -22s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -21s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -20s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -19s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -18s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -17s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -16s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -15s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -14s cpu=20.0% ram=87.5% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -13s cpu=20.0% ram=87.5% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -12s cpu=20.0% ram=87.5% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -11s cpu=20.0% ram=75.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+   -10s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -9s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -8s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -7s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -6s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -5s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -4s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -3s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -2s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
+    -1s cpu=20.0% ram=50.0% unattributed=2.0% programs=15 | cpu: chrome.exe x2 10.0%, System 2.0%, f01.exe 0.5% | ram: big.exe 3072MiB
     +0s cpu=95.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 75.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
     +1s cpu=95.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 75.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
     +2s cpu=95.0% ram=50.0% unattributed=2.0% programs=16 | cpu: stress.exe 75.0%, chrome.exe x2 10.0%, System 2.0% | ram: big.exe 3072MiB
@@ -130,3 +175,5 @@ log
   INFO episode ended start=2026-03-02T09:02:34Z end=2026-03-02T09:02:39Z seconds=5
   INFO episode started trigger=cpu start=2026-03-02T09:03:09Z preroll_samples=30
   INFO episode ended start=2026-03-02T09:03:09Z end=2026-03-02T09:03:13Z seconds=4
+  INFO episode started trigger=cpu start=2026-03-02T09:03:37Z preroll_samples=30
+  INFO episode ended start=2026-03-02T09:03:37Z end=2026-03-02T09:03:41Z seconds=4

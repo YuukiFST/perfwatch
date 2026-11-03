@@ -114,13 +114,19 @@ func TestRunRecordsLiveSnapshots(t *testing.T) {
 
 // TestRunAllowsOneCollectorPerDataDir starts a live collector, checks that a second run on the
 // same data directory refuses to start, then kills the first one hard: its stored seconds must
-// all be in their minute rollups, and the next run must start and close the minute it left open.
+// all be in their minute rollups, and the next run must start and close the minute and the
+// episode it left open. Thresholds near 0% make every live sample hot and none cool, so the
+// first collector is inside an episode when it dies.
 func TestRunAllowsOneCollectorPerDataDir(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		t.Skip("live sampling is implemented on Windows only")
 	}
 	dataDir := t.TempDir()
 	env := []string{"PERFWATCH_DATA_DIR=" + dataDir}
+	alwaysHot := "[peaks]\ncpu_start_percent = 0.001\ncpu_end_percent = 0.001\nstart_samples = 1\n"
+	if err := os.WriteFile(filepath.Join(dataDir, "perfwatch.toml"), []byte(alwaysHot), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	first := exec.Command(perfwatchBin, "run", "--print")
 	first.Env = append(os.Environ(), env...)
 	stdout, err := first.StdoutPipe()
@@ -156,16 +162,29 @@ func TestRunAllowsOneCollectorPerDataDir(t *testing.T) {
 	if stored == 0 || rolledUp != stored {
 		t.Errorf("after a hard kill: %d seconds stored, %d of them in minute rollups; want all of at least one", stored, rolledUp)
 	}
+	var openEpisodes int
+	var lastWarmIsNewest bool
+	err = db.QueryRow(`SELECT count(*), coalesce(min(last_warm_ts = (SELECT max(ts) FROM episode_seconds WHERE episode_id = e.id)), 0)
+		FROM episodes e WHERE end_ts IS NULL`).Scan(&openEpisodes, &lastWarmIsNewest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openEpisodes != 1 || !lastWarmIsNewest {
+		t.Errorf("after a hard kill: %d open episodes (want 1), last warm sample is the newest stored: %v (want true)", openEpisodes, lastWarmIsNewest)
+	}
 
 	if res := runPerfwatch(t, env, "run", "--replay", fixture); res.exitCode != 0 {
 		t.Fatalf("run after the hard kill failed:\n%s", res.transcript())
 	}
-	var open int
-	if err := db.QueryRow("SELECT count(*) FROM system_minutes WHERE cpu_p95 IS NULL OR ram_p95 IS NULL").Scan(&open); err != nil {
+	var open, endedAtLastWarm int
+	err = db.QueryRow(`SELECT (SELECT count(*) FROM system_minutes WHERE cpu_p95 IS NULL OR ram_p95 IS NULL)
+		+ (SELECT count(*) FROM episodes WHERE end_ts IS NULL),
+		(SELECT count(*) FROM episodes WHERE end_ts = last_warm_ts AND start_ts = (SELECT max(start_ts) FROM episodes))`).Scan(&open, &endedAtLastWarm)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if open != 0 {
-		t.Errorf("%d minutes still open after the next run started, want 0", open)
+	if open != 0 || endedAtLastWarm != 1 {
+		t.Errorf("after the next run started: %d minutes or episodes still open (want 0); the killed episode ended at its last warm sample: %d (want 1)", open, endedAtLastWarm)
 	}
 }
 

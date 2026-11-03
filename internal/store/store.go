@@ -62,13 +62,16 @@ CREATE INDEX program_minutes_by_program ON program_minutes (program_id);
 `,
 	`
 -- A peak episode. Its samples run from preroll_ts through end_ts and on through the samples
--- that cooled it down; end_ts stays NULL while the episode is open.
+-- that cooled it down; end_ts stays NULL while the episode is open. last_warm_ts is the end of
+-- its newest sample that was not cool, which becomes end_ts when the episode ends, also when
+-- the next collector closes an episode a killed one left open.
 CREATE TABLE episodes (
-	id         INTEGER PRIMARY KEY,
-	preroll_ts INTEGER NOT NULL,
-	start_ts   INTEGER NOT NULL UNIQUE,
-	end_ts     INTEGER,
-	trigger    TEXT NOT NULL
+	id           INTEGER PRIMARY KEY,
+	preroll_ts   INTEGER NOT NULL,
+	start_ts     INTEGER NOT NULL UNIQUE,
+	end_ts       INTEGER,
+	last_warm_ts INTEGER NOT NULL,
+	trigger      TEXT NOT NULL
 );
 CREATE TABLE episode_seconds (
 	episode_id       INTEGER NOT NULL REFERENCES episodes (id) ON DELETE CASCADE,

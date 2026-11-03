@@ -48,7 +48,7 @@ An interval longer than 5 s (the machine slept or the collector was stopped) is 
 
 An episode starts when CPU reaches 85% or RAM reaches 90% for 3 consecutive samples, and ends after 10 consecutive samples with CPU below 75% and RAM below 85%.
 Its end is the last sample before that cool-down; a gap in the samples, or `run` stopping, ends it too.
-To change the thresholds, put a `perfwatch.toml` in the data directory; every key is optional and an unknown key is an error:
+To change the thresholds, put a `perfwatch.toml` in the data directory; every key is optional, an unknown key is an error, and `preroll_seconds` is at most 300:
 
 ```toml
 [peaks]
