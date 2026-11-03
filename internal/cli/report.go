@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,7 +36,7 @@ func clock() (time.Time, *time.Location, error) {
 type sinceFlag struct{ d time.Duration }
 
 func (f *sinceFlag) String() string {
-	if f.d%(24*time.Hour) == 0 {
+	if f.d > 24*time.Hour && f.d%(24*time.Hour) == 0 {
 		return fmt.Sprintf("%dd", f.d/(24*time.Hour))
 	}
 	return strings.TrimSuffix(strings.TrimSuffix(f.d.String(), "0s"), "0m")
@@ -53,7 +54,7 @@ func (f *sinceFlag) Set(s string) error {
 func parseSince(s string) (time.Duration, error) {
 	if days, ok := strings.CutSuffix(s, "d"); ok {
 		n, err := strconv.Atoi(days)
-		if err != nil || n <= 0 {
+		if err != nil || n <= 0 || n > int(math.MaxInt64/int64(24*time.Hour)) {
 			return 0, fmt.Errorf("want a positive whole number of days, as in 7d")
 		}
 		return time.Duration(n) * 24 * time.Hour, nil

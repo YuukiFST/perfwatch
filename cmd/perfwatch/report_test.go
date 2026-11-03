@@ -14,7 +14,7 @@ func TestTopAndPeaks(t *testing.T) {
 	if res := runPerfwatch(t, env, "run", "--replay", fixture); res.exitCode != 0 {
 		t.Fatalf("run --replay failed:\n%s", res.transcript())
 	}
-	transcripts := func(runs ...[]string) string {
+	transcriptsAt := func(env []string, runs ...[]string) string {
 		var b strings.Builder
 		for _, args := range runs {
 			b.WriteString(strings.ReplaceAll(runPerfwatch(t, env, args...).transcript(), dataDir, "<data dir>"))
@@ -22,6 +22,9 @@ func TestTopAndPeaks(t *testing.T) {
 		}
 		return b.String()
 	}
+	transcripts := func(runs ...[]string) string { return transcriptsAt(env, runs...) }
+	// Half past a minute: both modes still start the range on the minute, as the header shows.
+	offMinute := []string{"PERFWATCH_DATA_DIR=" + dataDir, "PERFWATCH_NOW=2026-03-02T09:10:30Z"}
 	assertGolden(t, "top", transcripts(
 		[]string{"top"},
 		[]string{"top", "--json", "--limit", "5"},
@@ -31,6 +34,11 @@ func TestTopAndPeaks(t *testing.T) {
 		[]string{"top", "--since", "1m"}, // after the last sample
 		[]string{"top", "--since", "0"},
 		[]string{"top", "--since", "3x"},
+		[]string{"top", "--since", "300000d"}, // past the longest duration
+		[]string{"top", "--limit", "0"},
+	)+transcriptsAt(offMinute,
+		[]string{"top", "--since", "8m", "--limit", "3"},
+		[]string{"top", "--since", "8m", "--peaks-only", "--json", "--limit", "1"},
 	))
 	assertGolden(t, "peaks", transcripts(
 		[]string{"peaks"},
