@@ -1,0 +1,30 @@
+$ perfwatch install
+exit: 0
+--- stdout
+Autostart at logon: HKCU\<run key>\perfwatch = <perfwatch> run --data-dir <data dir>
+Collector started for <data dir> (process <pid>).
+--- stderr
+
+$ perfwatch install
+exit: 0
+--- stdout
+Autostart at logon: HKCU\<run key>\perfwatch = <perfwatch> run --data-dir <data dir>
+The collector already runs for <data dir>.
+--- stderr
+
+$ perfwatch uninstall
+exit: 0
+--- stdout
+Removed autostart: HKCU\<run key>\perfwatch.
+Collector stopped.
+Data kept in <data dir>.
+--- stderr
+
+$ perfwatch uninstall
+exit: 0
+--- stdout
+No autostart entry to remove.
+No collector runs for <data dir>.
+Data kept in <data dir>.
+--- stderr
+

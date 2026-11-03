@@ -39,6 +39,8 @@ func commands() []command {
 		{name: "peaks", summary: "list the peak episodes and who caused them", run: runPeaks},
 		{name: "serve", summary: "serve the dashboard on 127.0.0.1", run: runServe},
 		{name: "export", summary: "write the dashboard of a range to one HTML file", run: runExport},
+		{name: "install", summary: "start the collector now and at every logon", run: runInstall},
+		{name: "uninstall", summary: "stop the collector and its autostart; keep the data", run: runUninstall},
 		{name: "version", summary: "print the perfwatch version", run: runVersion},
 	}
 }

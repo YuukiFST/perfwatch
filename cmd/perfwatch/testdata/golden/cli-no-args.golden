@@ -10,6 +10,8 @@ Commands:
   peaks      list the peak episodes and who caused them
   serve      serve the dashboard on 127.0.0.1
   export     write the dashboard of a range to one HTML file
+  install    start the collector now and at every logon
+  uninstall  stop the collector and its autostart; keep the data
   version    print the perfwatch version
 
 Run "perfwatch <command> -h" for the flags of a command.
