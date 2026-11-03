@@ -232,6 +232,7 @@ func (db *DB) Prune(ctx context.Context, now time.Time) error {
 		{"DELETE FROM system_seconds WHERE ts < ?", SecondsRetention},
 		{"DELETE FROM system_minutes WHERE minute < ?", MinutesRetention},
 		{"DELETE FROM program_minutes WHERE minute < ?", ProgramMinutesRetention},
+		{"DELETE FROM episodes WHERE coalesce(end_ts, start_ts) < ?", EpisodesRetention},
 	}
 	for _, step := range steps {
 		if _, err := tx.ExecContext(ctx, step.query, now.Add(-step.age).UnixMilli()); err != nil {
