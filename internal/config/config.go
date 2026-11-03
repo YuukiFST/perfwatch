@@ -14,6 +14,9 @@ import (
 // FileName is the config file inside the data directory.
 const FileName = "perfwatch.toml"
 
+// MaxPreRollSeconds bounds the pre-roll ring, which the collector keeps in memory.
+const MaxPreRollSeconds = 300
+
 // Config is the whole perfwatch.toml.
 type Config struct {
 	Peaks Peaks `toml:"peaks"`
@@ -75,12 +78,13 @@ func (p Peaks) validate() error {
 		name       string
 		start, end float64
 	}{{"cpu", p.CPUStartPercent, p.CPUEndPercent}, {"ram", p.RAMStartPercent, p.RAMEndPercent}} {
-		if t.end <= 0 || t.end > t.start || t.start > 100 {
+		// Written as what is accepted, so a NaN, which fails every comparison, is rejected.
+		if !(0 < t.end && t.end <= t.start && t.start <= 100) {
 			return fmt.Errorf("peaks: want 0 < %s_end_percent <= %s_start_percent <= 100, got %g and %g", t.name, t.name, t.end, t.start)
 		}
 	}
-	if p.StartSamples < 1 || p.EndSamples < 1 || p.PreRollSeconds < 0 {
-		return fmt.Errorf("peaks: want start_samples and end_samples >= 1 and preroll_seconds >= 0")
+	if p.StartSamples < 1 || p.EndSamples < 1 || p.PreRollSeconds < 0 || p.PreRollSeconds > MaxPreRollSeconds {
+		return fmt.Errorf("peaks: want start_samples and end_samples >= 1 and 0 <= preroll_seconds <= %d", MaxPreRollSeconds)
 	}
 	return nil
 }
