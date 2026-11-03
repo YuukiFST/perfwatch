@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>perfwatch</title>
+<link rel="stylesheet" href="vendor/uPlot.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>perfwatch</h1>
+    <p class="muted" id="range-label">Carregando…</p>
+  </div>
+  <nav class="ranges" aria-label="Intervalo">
+    <button type="button" data-hours="1">1 hora</button>
+    <button type="button" data-hours="24">24 horas</button>
+    <button type="button" data-hours="168">7 dias</button>
+    <button type="button" data-hours="720">30 dias</button>
+    <button type="button" id="zoom-out" disabled>Desfazer zoom</button>
+  </nav>
+</header>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+
+<main>
+  <section class="panel" aria-labelledby="timeline-title">
+    <h2 id="timeline-title">CPU e RAM</h2>
+    <figure>
+      <div id="timeline" class="chart" aria-hidden="true"></div>
+      <figcaption id="timeline-summary" class="summary"></figcaption>
+    </figure>
+    <ul class="legend" aria-hidden="true">
+      <li><span class="swatch cpu"></span>CPU</li>
+      <li><span class="swatch ram"></span>RAM</li>
+      <li><span class="swatch limit"></span>Limiares de início (CPU tracejado, RAM pontilhado)</li>
+      <li><span class="swatch peak"></span>Episódio de pico</li>
+    </ul>
+    <p class="muted hint">Arraste no gráfico para ampliar um trecho. Clique numa faixa vermelha para ver o episódio.</p>
+    <details>
+      <summary>Dados do gráfico em tabela</summary>
+      <div class="table-wrap">
+        <table id="timeline-table">
+          <caption class="visually-hidden">CPU e RAM médias por intervalo</caption>
+          <thead><tr><th scope="col">Início</th><th scope="col" class="num">CPU</th><th scope="col" class="num">RAM</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="episodes-title">
+    <h2 id="episodes-title">Episódios de pico</h2>
+    <ul id="episode-list" class="episodes"></ul>
+  </section>
+
+  <section class="panel" id="episode-detail" aria-labelledby="episode-title" hidden>
+    <div class="panel-head">
+      <h2 id="episode-title" tabindex="-1">Episódio</h2>
+      <button type="button" id="episode-close">Fechar</button>
+    </div>
+    <dl id="episode-stats" class="stats"></dl>
+    <figure>
+      <div id="episode-chart" class="chart" aria-hidden="true"></div>
+      <figcaption id="episode-summary" class="summary"></figcaption>
+    </figure>
+    <h3>Programas no episódio</h3>
+    <table id="episode-programs" class="responsive">
+      <thead><tr><th scope="col">Programa</th><th scope="col" class="num">CPU média</th><th scope="col" class="num">CPU máx.</th><th scope="col" class="num">RAM máx.</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <details>
+      <summary>Amostras do episódio em tabela</summary>
+      <div class="table-wrap">
+        <table id="episode-table">
+          <caption class="visually-hidden">Amostras por segundo, do pré-roll até o fim</caption>
+          <thead><tr><th scope="col">Horário</th><th scope="col" class="num">CPU</th><th scope="col" class="num">RAM</th><th scope="col" class="num">Não atribuída</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel" aria-labelledby="ranking-title">
+    <div class="panel-head">
+      <h2 id="ranking-title">Ranking de programas</h2>
+      <label class="toggle"><input type="checkbox" id="peaks-only"> Só durante picos</label>
+    </div>
+    <p id="ranking-summary" class="muted"></p>
+    <table id="ranking" class="responsive">
+      <thead><tr><th scope="col">Programa</th><th scope="col" class="num">CPU-s</th><th scope="col" class="num">CPU média</th><th scope="col" class="num">CPU máx.</th><th scope="col" class="num">RAM máx.</th><th scope="col" class="num">Instâncias</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<script src="vendor/uPlot.iife.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

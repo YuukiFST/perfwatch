@@ -16,6 +16,7 @@ Under construction: the commands land one pull request at a time.
 | `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl]` | Sample CPU and RAM every second until interrupted. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system, into the directory `PERFWATCH_DATA_DIR` names. |
 | `perfwatch top [--since 24h] [--peaks-only] [--limit 20] [--json]` | Rank the programs by CPU time over the range: CPU-seconds, average and maximum CPU, maximum private RAM, instances. `--peaks-only` counts only the seconds inside peak episodes. |
 | `perfwatch peaks [--since 7d] [--json]` | List the peak episodes in the range, newest first, with their maximum CPU and RAM, unattributed CPU, pre-roll and top programs. |
+| `perfwatch serve [--port 7313]` | Serve the dashboard on `http://127.0.0.1:7313/`, loopback only, until Ctrl+C. |
 | `perfwatch version` | Print the version. |
 
 `run --print` reads like this:
@@ -64,6 +65,18 @@ start_samples = 3
 end_samples = 10
 preroll_seconds = 30
 ```
+
+## Dashboard
+
+`perfwatch serve` shows, in pt-BR:
+
+- CPU and RAM over the chosen range (1 hour to 30 days), with the start thresholds, gaps where the collector did not run and peak episodes shaded; drag across the chart to zoom in.
+- Each episode on click: duration, trigger, maximum CPU and RAM, unattributed CPU, its pre-roll and its top programs.
+- The program ranking of the range, also counting only peak seconds.
+
+Every chart has a text summary and its data as a table.
+The page, its script and [uPlot](https://github.com/leeoniya/uPlot) 1.6.32 (MIT, `internal/cli/web/vendor/uPlot.LICENSE`) are embedded in the binary; the page loads nothing from the network.
+The server answers only requests addressed to `127.0.0.1` or `localhost` on its port.
 
 ## Log
 

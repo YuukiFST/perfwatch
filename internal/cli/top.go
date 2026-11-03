@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/YuukiFST/perfwatch/internal/sampler"
+	"github.com/YuukiFST/perfwatch/internal/store"
 )
 
 type topJSON struct {
@@ -67,23 +68,39 @@ func runTop(ctx context.Context, streams Streams, args []string) (err error) {
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
 
-	// Programs are stored per minute, so the range starts on a minute in both modes.
-	from := now.Add(-since.d).Truncate(time.Minute)
-	rank := db.RankPrograms
-	if *peaksOnly {
-		rank = db.RankPeakPrograms
-	}
-	r, err := rank(ctx, from, now)
+	out, err := rankTop(ctx, db, now.Add(-since.d), now, loc, *peaksOnly, *limit)
 	if err != nil {
 		return err
 	}
+	if *asJSON {
+		enc := json.NewEncoder(streams.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(out)
+	}
+	printTop(streams.Stdout, out)
+	return nil
+}
+
+// rankTop ranks the programs over [from, to), or over the peak seconds in it, and lists the
+// top limit of them with the CPU of the rest.
+func rankTop(ctx context.Context, db *store.DB, from, to time.Time, loc *time.Location, peaksOnly bool, limit int) (topJSON, error) {
+	// Programs are stored per minute, so the range starts on a minute in both modes.
+	from = from.Truncate(time.Minute)
+	rank := db.RankPrograms
+	if peaksOnly {
+		rank = db.RankPeakPrograms
+	}
+	r, err := rank(ctx, from, to)
+	if err != nil {
+		return topJSON{}, err
+	}
 	out := topJSON{
-		From: from.In(loc), To: now.In(loc), PeaksOnly: *peaksOnly, SampledSeconds: r.SampledSeconds,
+		From: from.In(loc), To: to.In(loc), PeaksOnly: peaksOnly, SampledSeconds: r.SampledSeconds,
 		CPUAvgPercent: round2(percentOf(r.BusyTicks, r.CapacityTicks)),
 		Unattributed:  cpuShare(r.UnattributedTicks, r.CapacityTicks),
 		Programs:      []programRankJSON{},
 	}
-	listed := r.Programs[:min(*limit, len(r.Programs))]
+	listed := r.Programs[:min(limit, len(r.Programs))]
 	other := r.BusyTicks - r.UnattributedTicks
 	for _, p := range listed {
 		other -= p.CPUTicks
@@ -99,13 +116,7 @@ func runTop(ctx context.Context, streams Streams, args []string) (err error) {
 			PrivateMaxBytes: p.PrivateMaxBytes, InstancesMax: p.InstancesMax,
 		})
 	}
-	if *asJSON {
-		enc := json.NewEncoder(streams.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(out)
-	}
-	printTop(streams.Stdout, out)
-	return nil
+	return out, nil
 }
 
 func cpuShare(ticks, capacity int64) cpuShareJSON {

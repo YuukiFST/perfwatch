@@ -8,6 +8,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/YuukiFST/perfwatch/internal/store"
 )
 
 // episodePrograms is how many programs each listed episode names.
@@ -20,6 +22,7 @@ type peaksJSON struct {
 }
 
 type episodeJSON struct {
+	ID                     int64                `json:"id"`
 	Start                  time.Time            `json:"start"`
 	End                    time.Time            `json:"end"`
 	Open                   bool                 `json:"open"`
@@ -65,19 +68,7 @@ func runPeaks(ctx context.Context, streams Streams, args []string) (err error) {
 	}
 	out := peaksJSON{From: from.In(loc), To: now.In(loc), Episodes: []episodeJSON{}}
 	for _, e := range episodes {
-		ej := episodeJSON{
-			Start: e.Start.In(loc), End: e.End.In(loc), Open: e.Open,
-			Seconds: e.End.Sub(e.Start).Seconds(), PreRollSeconds: e.Start.Sub(e.PreRoll).Seconds(),
-			Trigger: e.Trigger, CPUMaxPercent: round2(e.CPUMaxPercent), RAMMaxPercent: round2(e.RAMMaxPercent),
-			UnattributedAvgPercent: round2(e.UnattributedAvgPercent), Programs: []episodeProgramJSON{},
-		}
-		for _, p := range e.Programs {
-			ej.Programs = append(ej.Programs, episodeProgramJSON{
-				Name: p.Name, ServiceGroup: p.ServiceGroup, CPUAvgPercent: round2(p.CPUAvgPercent),
-				CPUMaxPercent: round2(p.CPUMaxPercent), PrivateMaxBytes: p.PrivateMaxBytes,
-			})
-		}
-		out.Episodes = append(out.Episodes, ej)
+		out.Episodes = append(out.Episodes, newEpisodeJSON(e, loc))
 	}
 	if *asJSON {
 		enc := json.NewEncoder(streams.Stdout)
@@ -86,6 +77,22 @@ func runPeaks(ctx context.Context, streams Streams, args []string) (err error) {
 	}
 	printPeaks(streams.Stdout, out)
 	return nil
+}
+
+func newEpisodeJSON(e store.Episode, loc *time.Location) episodeJSON {
+	ej := episodeJSON{
+		ID: e.ID, Start: e.Start.In(loc), End: e.End.In(loc), Open: e.Open,
+		Seconds: e.End.Sub(e.Start).Seconds(), PreRollSeconds: e.Start.Sub(e.PreRoll).Seconds(),
+		Trigger: e.Trigger, CPUMaxPercent: round2(e.CPUMaxPercent), RAMMaxPercent: round2(e.RAMMaxPercent),
+		UnattributedAvgPercent: round2(e.UnattributedAvgPercent), Programs: []episodeProgramJSON{},
+	}
+	for _, p := range e.Programs {
+		ej.Programs = append(ej.Programs, episodeProgramJSON{
+			Name: p.Name, ServiceGroup: p.ServiceGroup, CPUAvgPercent: round2(p.CPUAvgPercent),
+			CPUMaxPercent: round2(p.CPUMaxPercent), PrivateMaxBytes: p.PrivateMaxBytes,
+		})
+	}
+	return ej
 }
 
 // printPeaks writes one block per episode, newest first.
