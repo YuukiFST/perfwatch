@@ -60,6 +60,36 @@ CREATE TABLE program_minutes (
 ) WITHOUT ROWID;
 CREATE INDEX program_minutes_by_program ON program_minutes (program_id);
 `,
+	`
+-- A peak episode. Its samples run from preroll_ts through end_ts and on through the samples
+-- that cooled it down; end_ts stays NULL while the episode is open.
+CREATE TABLE episodes (
+	id         INTEGER PRIMARY KEY,
+	preroll_ts INTEGER NOT NULL,
+	start_ts   INTEGER NOT NULL UNIQUE,
+	end_ts     INTEGER,
+	trigger    TEXT NOT NULL
+);
+CREATE TABLE episode_seconds (
+	episode_id       INTEGER NOT NULL REFERENCES episodes (id) ON DELETE CASCADE,
+	ts               INTEGER NOT NULL,
+	span_ms          INTEGER NOT NULL,
+	cpu_pct          REAL NOT NULL,
+	ram_pct          REAL NOT NULL,
+	unattributed_pct REAL NOT NULL,
+	PRIMARY KEY (episode_id, ts)
+) WITHOUT ROWID;
+CREATE TABLE episode_programs (
+	episode_id    INTEGER NOT NULL REFERENCES episodes (id) ON DELETE CASCADE,
+	ts            INTEGER NOT NULL,
+	program_id    INTEGER NOT NULL REFERENCES programs (id),
+	cpu_pct       REAL NOT NULL,
+	private_bytes INTEGER NOT NULL,
+	instances     INTEGER NOT NULL,
+	PRIMARY KEY (episode_id, ts, program_id)
+) WITHOUT ROWID;
+CREATE INDEX episode_programs_by_program ON episode_programs (program_id);
+`,
 }
 
 // DB is an open perfwatch database.
