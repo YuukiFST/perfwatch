@@ -1,0 +1,243 @@
+$ perfwatch peaks
+exit: 0
+--- stdout
+Peak episodes, 2026-02-23 09:10 to 2026-03-02 09:10 UTC: 4
+
+2026-03-02 09:03:37 to 09:03:41, 4s, CPU peak: CPU max 95.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
+  PROGRAM     AVG CPU  MAX CPU  MAX RAM
+  stress.exe    75.0%    75.0%   20 MiB
+  chrome.exe    10.0%    10.0%  700 MiB
+  System         2.0%     2.0%    1 MiB
+  f01.exe        0.5%     0.5%   10 MiB
+  f02.exe        0.5%     0.5%   20 MiB
+
+2026-03-02 09:03:09 to 09:03:13, 4s, CPU peak: CPU max 85.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
+  PROGRAM     AVG CPU  MAX CPU  MAX RAM
+  stress.exe    62.5%    65.0%   20 MiB
+  chrome.exe    10.0%    10.0%  700 MiB
+  System         2.0%     2.0%    1 MiB
+  f01.exe        0.5%     0.5%   10 MiB
+  f02.exe        0.5%     0.5%   20 MiB
+
+2026-03-02 09:02:34 to 09:02:39, 5s, RAM peak: CPU max 20.0%, RAM max 93.0%, unattributed 2.0% on average, 5s pre-roll
+  PROGRAM     AVG CPU  MAX CPU  MAX RAM
+  chrome.exe    10.0%    10.0%  700 MiB
+  System         2.0%     2.0%    1 MiB
+  f01.exe        0.5%     0.5%   10 MiB
+  f02.exe        0.5%     0.5%   20 MiB
+  f03.exe        0.5%     0.5%   30 MiB
+
+2026-03-02 09:00:52 to 09:01:19, 27s, CPU peak: CPU max 95.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
+  PROGRAM     AVG CPU  MAX CPU  MAX RAM
+  stress.exe    63.3%    75.0%   20 MiB
+  chrome.exe    10.0%    10.0%  700 MiB
+  System         2.0%     2.0%    1 MiB
+  f01.exe        0.5%     0.5%   10 MiB
+  f02.exe        0.5%     0.5%   20 MiB
+--- stderr
+
+$ perfwatch peaks --json
+exit: 0
+--- stdout
+{
+  "from": "2026-02-23T09:10:00Z",
+  "to": "2026-03-02T09:10:00Z",
+  "episodes": [
+    {
+      "start": "2026-03-02T09:03:37Z",
+      "end": "2026-03-02T09:03:41Z",
+      "open": false,
+      "seconds": 4,
+      "preroll_seconds": 30,
+      "trigger": "cpu",
+      "cpu_max_percent": 95,
+      "ram_max_percent": 50,
+      "unattributed_avg_percent": 2,
+      "programs": [
+        {
+          "name": "stress.exe",
+          "cpu_avg_percent": 75,
+          "cpu_max_percent": 75,
+          "private_max_bytes": 20971520
+        },
+        {
+          "name": "chrome.exe",
+          "cpu_avg_percent": 10,
+          "cpu_max_percent": 10,
+          "private_max_bytes": 734003200
+        },
+        {
+          "name": "System",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "name": "f01.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 10485760
+        },
+        {
+          "name": "f02.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 20971520
+        }
+      ]
+    },
+    {
+      "start": "2026-03-02T09:03:09Z",
+      "end": "2026-03-02T09:03:13Z",
+      "open": false,
+      "seconds": 4,
+      "preroll_seconds": 30,
+      "trigger": "cpu",
+      "cpu_max_percent": 85,
+      "ram_max_percent": 50,
+      "unattributed_avg_percent": 2,
+      "programs": [
+        {
+          "name": "stress.exe",
+          "cpu_avg_percent": 62.5,
+          "cpu_max_percent": 65,
+          "private_max_bytes": 20971520
+        },
+        {
+          "name": "chrome.exe",
+          "cpu_avg_percent": 10,
+          "cpu_max_percent": 10,
+          "private_max_bytes": 734003200
+        },
+        {
+          "name": "System",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "name": "f01.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 10485760
+        },
+        {
+          "name": "f02.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 20971520
+        }
+      ]
+    },
+    {
+      "start": "2026-03-02T09:02:34Z",
+      "end": "2026-03-02T09:02:39Z",
+      "open": false,
+      "seconds": 5,
+      "preroll_seconds": 5,
+      "trigger": "ram",
+      "cpu_max_percent": 20,
+      "ram_max_percent": 93,
+      "unattributed_avg_percent": 2,
+      "programs": [
+        {
+          "name": "chrome.exe",
+          "cpu_avg_percent": 10,
+          "cpu_max_percent": 10,
+          "private_max_bytes": 734003200
+        },
+        {
+          "name": "System",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "name": "f01.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 10485760
+        },
+        {
+          "name": "f02.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 20971520
+        },
+        {
+          "name": "f03.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 31457280
+        }
+      ]
+    },
+    {
+      "start": "2026-03-02T09:00:52Z",
+      "end": "2026-03-02T09:01:19Z",
+      "open": false,
+      "seconds": 27,
+      "preroll_seconds": 30,
+      "trigger": "cpu",
+      "cpu_max_percent": 95,
+      "ram_max_percent": 50,
+      "unattributed_avg_percent": 2,
+      "programs": [
+        {
+          "name": "stress.exe",
+          "cpu_avg_percent": 63.26,
+          "cpu_max_percent": 75,
+          "private_max_bytes": 20971520
+        },
+        {
+          "name": "chrome.exe",
+          "cpu_avg_percent": 10,
+          "cpu_max_percent": 10,
+          "private_max_bytes": 734003200
+        },
+        {
+          "name": "System",
+          "cpu_avg_percent": 2,
+          "cpu_max_percent": 2,
+          "private_max_bytes": 1048576
+        },
+        {
+          "name": "f01.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 10485760
+        },
+        {
+          "name": "f02.exe",
+          "cpu_avg_percent": 0.5,
+          "cpu_max_percent": 0.5,
+          "private_max_bytes": 20971520
+        }
+      ]
+    }
+  ]
+}
+--- stderr
+
+$ perfwatch peaks --since 7m
+exit: 0
+--- stdout
+Peak episodes, 2026-03-02 09:03 to 2026-03-02 09:10 UTC: 2
+
+2026-03-02 09:03:37 to 09:03:41, 4s, CPU peak: CPU max 95.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
+  PROGRAM     AVG CPU  MAX CPU  MAX RAM
+  stress.exe    75.0%    75.0%   20 MiB
+  chrome.exe    10.0%    10.0%  700 MiB
+  System         2.0%     2.0%    1 MiB
+  f01.exe        0.5%     0.5%   10 MiB
+  f02.exe        0.5%     0.5%   20 MiB
+
+2026-03-02 09:03:09 to 09:03:13, 4s, CPU peak: CPU max 85.0%, RAM max 50.0%, unattributed 2.0% on average, 30s pre-roll
+  PROGRAM     AVG CPU  MAX CPU  MAX RAM
+  stress.exe    62.5%    65.0%   20 MiB
+  chrome.exe    10.0%    10.0%  700 MiB
+  System         2.0%     2.0%    1 MiB
+  f01.exe        0.5%     0.5%   10 MiB
+  f02.exe        0.5%     0.5%   20 MiB
+--- stderr
+

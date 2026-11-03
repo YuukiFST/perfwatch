@@ -6,6 +6,8 @@ Usage: perfwatch <command> [flags]
 
 Commands:
   run        sample CPU and RAM every second until interrupted
+  top        rank the programs that used the most CPU and RAM
+  peaks      list the peak episodes and who caused them
   version    print the perfwatch version
 
 Run "perfwatch <command> -h" for the flags of a command.
