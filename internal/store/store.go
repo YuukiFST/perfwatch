@@ -93,6 +93,11 @@ CREATE TABLE episode_programs (
 ) WITHOUT ROWID;
 CREATE INDEX episode_programs_by_program ON episode_programs (program_id);
 `,
+	`
+-- The machine's capacity over each episode second, so per-program shares become CPU-seconds.
+-- Rows stored before this column existed read 0 and count as no capacity.
+ALTER TABLE episode_seconds ADD COLUMN capacity_ticks INTEGER NOT NULL DEFAULT 0;
+`,
 }
 
 // DB is an open perfwatch database.

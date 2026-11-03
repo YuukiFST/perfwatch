@@ -17,6 +17,7 @@ const EpisodesRetention = 180 * 24 * time.Hour
 type EpisodeSample struct {
 	End                 time.Time
 	Span                time.Duration
+	CapacityTicks       uint64
 	CPUPercent          float64
 	RAMPercent          float64
 	UnattributedPercent float64
@@ -64,9 +65,9 @@ func (db *DB) addEpisodeSamples(ctx context.Context, tx *sql.Tx, staged map[usag
 	for _, s := range samples {
 		ts := s.End.UnixMilli()
 		_, err := tx.ExecContext(ctx, `
-INSERT INTO episode_seconds (episode_id, ts, span_ms, cpu_pct, ram_pct, unattributed_pct)
-VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
-			id, ts, s.Span.Milliseconds(), s.CPUPercent, s.RAMPercent, s.UnattributedPercent)
+INSERT INTO episode_seconds (episode_id, ts, span_ms, capacity_ticks, cpu_pct, ram_pct, unattributed_pct)
+VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+			id, ts, s.Span.Milliseconds(), int64(s.CapacityTicks), s.CPUPercent, s.RAMPercent, s.UnattributedPercent)
 		if err != nil {
 			return err
 		}
