@@ -94,6 +94,7 @@ func (db *DB) rankRows(ctx context.Context, query string, args []any) ([]Program
 
 // Episode is a stored peak episode with its summary over [Start, End].
 type Episode struct {
+	ID      int64
 	PreRoll time.Time
 	Start   time.Time
 	// End is the last sample that was not cool; Open episodes have not ended yet and End is
@@ -116,45 +117,59 @@ type EpisodeRank struct {
 	PrivateMaxBytes int64
 }
 
-// Episodes returns the episodes that overlap [from, to], newest first, each with its top
-// programs by average CPU share.
-func (db *DB) Episodes(ctx context.Context, from, to time.Time, programs int) ([]Episode, error) {
-	rows, err := db.sql.QueryContext(ctx, `
+const episodeSummary = `
 SELECT e.id, e.preroll_ts, e.start_ts, coalesce(e.end_ts, e.last_warm_ts), e.end_ts IS NULL, e.trigger,
 	coalesce(max(s.cpu_pct), 0), coalesce(max(s.ram_pct), 0), coalesce(avg(s.unattributed_pct), 0)
-FROM episodes e LEFT JOIN episode_seconds s ON s.episode_id = e.id AND s.ts > e.start_ts AND s.ts <= coalesce(e.end_ts, e.last_warm_ts)
+FROM episodes e LEFT JOIN episode_seconds s ON s.episode_id = e.id AND s.ts > e.start_ts AND s.ts <= coalesce(e.end_ts, e.last_warm_ts)`
+
+// Episodes returns the episodes that overlap [from, to], newest first, each with its top
+// programs by average CPU share; programs 0 leaves Programs empty.
+func (db *DB) Episodes(ctx context.Context, from, to time.Time, programs int) ([]Episode, error) {
+	return db.episodes(ctx, programs, episodeSummary+`
 WHERE e.start_ts <= ? AND coalesce(e.end_ts, e.last_warm_ts) >= ?
 GROUP BY e.id ORDER BY e.start_ts DESC`, to.UnixMilli(), from.UnixMilli())
+}
+
+// EpisodeByID returns one episode with its top programs, and false when no episode has id.
+func (db *DB) EpisodeByID(ctx context.Context, id int64, programs int) (Episode, bool, error) {
+	found, err := db.episodes(ctx, programs, episodeSummary+`
+WHERE e.id = ? GROUP BY e.id`, id)
+	if err != nil || len(found) == 0 {
+		return Episode{}, false, err
+	}
+	return found[0], true, nil
+}
+
+func (db *DB) episodes(ctx context.Context, programs int, query string, args ...any) ([]Episode, error) {
+	rows, err := db.sql.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list episodes: %w", err)
 	}
-	type row struct {
-		id int64
-		Episode
-	}
-	var found []row
+	var found []Episode
 	for rows.Next() {
-		var r row
+		var e Episode
 		var preroll, start, end int64
-		if err := rows.Scan(&r.id, &preroll, &start, &end, &r.Open, &r.Trigger, &r.CPUMaxPercent, &r.RAMMaxPercent, &r.UnattributedAvgPercent); err != nil {
+		if err := rows.Scan(&e.ID, &preroll, &start, &end, &e.Open, &e.Trigger, &e.CPUMaxPercent, &e.RAMMaxPercent, &e.UnattributedAvgPercent); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("list episodes: %w", err)
 		}
-		r.PreRoll, r.Start, r.End = time.UnixMilli(preroll), time.UnixMilli(start), time.UnixMilli(end)
-		found = append(found, r)
+		e.PreRoll, e.Start, e.End = time.UnixMilli(preroll), time.UnixMilli(start), time.UnixMilli(end)
+		found = append(found, e)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("list episodes: %w", err)
 	}
-	episodes := make([]Episode, len(found))
-	for i, r := range found {
-		if r.Programs, err = db.episodePrograms(ctx, r.id, programs); err != nil {
+	if programs == 0 {
+		return found, nil
+	}
+	// The connection is free again only once rows is closed, so programs are read after.
+	for i := range found {
+		if found[i].Programs, err = db.episodePrograms(ctx, found[i].ID, programs); err != nil {
 			return nil, err
 		}
-		episodes[i] = r.Episode
 	}
-	return episodes, nil
+	return found, nil
 }
 
 func (db *DB) episodePrograms(ctx context.Context, id int64, limit int) ([]EpisodeRank, error) {
