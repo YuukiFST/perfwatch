@@ -137,7 +137,7 @@ func (d *detector) trigger() string {
 // EpisodePrograms with the most private RAM.
 func episodeSample(iv usage.Interval) store.EpisodeSample {
 	s := store.EpisodeSample{
-		End: iv.End, Span: iv.End.Sub(iv.Start),
+		End: iv.End, Span: iv.End.Sub(iv.Start), CapacityTicks: iv.CapacityTicks,
 		CPUPercent: iv.CPUPercent, RAMPercent: iv.RAMPercent, UnattributedPercent: iv.UnattributedPercent,
 	}
 	keep := make([]bool, len(iv.Programs))
