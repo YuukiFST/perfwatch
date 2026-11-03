@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/YuukiFST/perfwatch/internal/collector"
 	"github.com/YuukiFST/perfwatch/internal/lock"
+	"github.com/YuukiFST/perfwatch/internal/logfile"
 	"github.com/YuukiFST/perfwatch/internal/sampler"
 	"github.com/YuukiFST/perfwatch/internal/store"
 	"github.com/YuukiFST/perfwatch/internal/usage"
@@ -25,6 +27,9 @@ const printedPrograms = 5
 
 // lockFileName is the file in the data directory a running collector holds exclusively.
 const lockFileName = "collector.lock"
+
+// logFileName is the collector's JSON log in the data directory.
+const logFileName = "perfwatch.log"
 
 func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 	fs := newFlagSet("run")
@@ -55,6 +60,21 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 		return err
 	}
 	defer func() { err = errors.Join(err, held.Release()) }()
+	logFile, err := logfile.Open(filepath.Join(dir, logFileName))
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, logFile.Close()) }()
+	log := slog.New(slog.NewJSONHandler(logFile, nil))
+	log.Info("collector started", "version", buildVersion(), "data_dir", dir, "replay", *replayPath)
+	defer func() {
+		if err != nil {
+			log.Error("collector stopped", "error", err.Error())
+		} else {
+			log.Info("collector stopped")
+		}
+	}()
+
 	db, err := store.Open(ctx, filepath.Join(dir, store.FileName))
 	if err != nil {
 		return err
@@ -73,6 +93,11 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 		return err
 	}
 	defer src.Close()
+	var self *selfUsage
+	if *replayPath == "" {
+		self = newSelfUsage(log)
+		defer self.flush()
+	}
 	var rec *sampler.Recorder
 	if *recordPath != "" {
 		if rec, err = sampler.CreateRecorder(*recordPath); err != nil {
@@ -98,6 +123,9 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 			if err := rec.Write(snap); err != nil {
 				return err
 			}
+		}
+		if self != nil {
+			self.observe(snap)
 		}
 		if !prev.Time.IsZero() {
 			if iv, ok := usage.Between(prev, snap); ok {

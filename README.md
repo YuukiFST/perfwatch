@@ -43,6 +43,11 @@ An interval longer than 5 s (the machine slept or the collector was stopped) is 
 - Machine rollups are written with every sample, so killing `run` loses none of them; the per-program breakdown of the minute in progress is lost.
 - Replaying samples already stored changes nothing, even after their 1 s rows have expired.
 
+## Log
+
+`run` writes JSON lines to `perfwatch.log` in the data directory: its start and stop, and once a minute its own CPU (as a share of one core) and working set.
+At 5 MB the log rotates to `perfwatch.log.1`, keeping three old files.
+
 ## Development
 
 ```sh
