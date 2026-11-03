@@ -32,23 +32,42 @@ const lockFileName = "collector.lock"
 // logFileName is the collector's JSON log in the data directory.
 const logFileName = "perfwatch.log"
 
-func runRun(ctx context.Context, streams Streams, args []string) (err error) {
+func runRun(ctx context.Context, streams Streams, args []string) error {
+	// Started by the service control manager: it reports stops through the service, and the
+	// service has no console to print to.
+	if inService() {
+		return runAsService(func(ctx context.Context) error {
+			return runCollector(ctx, Streams{Stdout: io.Discard, Stderr: io.Discard}, args)
+		})
+	}
+	return runCollector(ctx, streams, args)
+}
+
+func runCollector(ctx context.Context, streams Streams, args []string) (err error) {
 	fs := newFlagSet("run")
 	duration := fs.Duration("for", 0, "stop once this much time has been sampled (0 runs until interrupted)")
 	replayPath := fs.String("replay", "", "read snapshots from this JSON Lines fixture instead of the live system")
 	recordPath := fs.String("record", "", "write every snapshot to this JSON Lines file, for a later --replay")
 	printUsage := fs.Bool("print", false, "print one usage line per sample")
+	dataDirFlag := fs.String("data-dir", "", "keep the data in this directory instead of $"+dataDirEnv+` or %LOCALAPPDATA%\perfwatch`)
 	if err := parseFlags(fs, streams, args); err != nil {
 		return err
 	}
 
-	if *replayPath != "" && os.Getenv(dataDirEnv) == "" {
+	if *replayPath != "" && os.Getenv(dataDirEnv) == "" && *dataDirFlag == "" {
 		fmt.Fprintf(streams.Stderr, "perfwatch run: --replay stores the replayed samples; set %s to keep them out of the real history\n", dataDirEnv)
 		return errUsage
 	}
-	dir, err := dataDir()
-	if err != nil {
-		return err
+	dir := *dataDirFlag
+	if dir == "" {
+		if dir, err = dataDir(); err != nil {
+			return err
+		}
+	}
+	if *replayPath == "" && !*printUsage {
+		// Started at logon, Windows gives the collector a console window of its own; nothing is
+		// printed to it, so let it close.
+		detachLoneConsole()
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create data directory: %w", err)
@@ -61,6 +80,12 @@ func runRun(ctx context.Context, streams Streams, args []string) (err error) {
 		return err
 	}
 	defer func() { err = errors.Join(err, held.Release()) }()
+	// uninstall stops the collector of a data directory through this event.
+	ctx, unwatch, err := watchStop(ctx, dir)
+	if err != nil {
+		return err
+	}
+	defer unwatch()
 	logFile, err := logfile.Open(filepath.Join(dir, logFileName))
 	if err != nil {
 		return err
