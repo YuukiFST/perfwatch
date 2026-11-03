@@ -5,15 +5,24 @@ When a Windows PC turns slow, the process to blame has often exited or calmed do
 It is a single Go binary for Windows 10 and 11.
 The sampler sits behind an interface, so a Linux backend can be added later without touching storage or UI.
 
-## Status
+## Install
 
-Under construction: the commands land one pull request at a time.
+```sh
+perfwatch install      # start the collector now and at every logon; no admin needed
+perfwatch uninstall    # stop it and remove the autostart; the data stays
+```
+
+`install` adds `perfwatch` to `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, pointing at the `perfwatch.exe` it was run from, so keep the binary where it is.
+Running it again, or the registered command while the collector runs, still leaves one collector.
+At logon Windows opens a console window for the collector; it closes as soon as the collector starts and lets go of it.
+`install --service` installs a Windows service that starts at boot instead, from an elevated prompt; `uninstall` removes that too.
 
 ## Commands
 
 | Command | What it does |
 |---------|--------------|
-| `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl]` | Sample CPU and RAM every second until interrupted. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system, into the directory `PERFWATCH_DATA_DIR` names. |
+| `perfwatch install [--service]`, `perfwatch uninstall` | Start the collector now and at every logon, or stop it and its autostart; see Install. |
+| `perfwatch run [--print] [--for 10m] [--record file.jsonl] [--replay file.jsonl] [--data-dir dir]` | Sample CPU and RAM every second until interrupted; what autostart runs. `--print` shows one line per sample; `--record` saves the raw samples and `--replay` feeds them back instead of the live system, into the directory `PERFWATCH_DATA_DIR` or `--data-dir` names. |
 | `perfwatch top [--since 24h] [--peaks-only] [--limit 20] [--json]` | Rank the programs by CPU time over the range: CPU-seconds, average and maximum CPU, maximum private RAM, instances. `--peaks-only` counts only the seconds inside peak episodes. |
 | `perfwatch peaks [--since 7d] [--json]` | List the peak episodes in the range, newest first, with their maximum CPU and RAM, unattributed CPU, pre-roll and top programs. |
 | `perfwatch serve [--port 7313]` | Serve the dashboard on `http://127.0.0.1:7313/`, loopback only, until Ctrl+C. |
