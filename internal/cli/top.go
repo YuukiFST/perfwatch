@@ -13,16 +13,19 @@ import (
 )
 
 type topJSON struct {
-	From           time.Time         `json:"from"`
-	To             time.Time         `json:"to"`
-	PeaksOnly      bool              `json:"peaks_only"`
-	SampledSeconds int64             `json:"sampled_seconds"`
-	CPUAvgPercent  float64           `json:"cpu_avg_percent"`
-	Unattributed   unattributedJSON  `json:"unattributed"`
-	Programs       []programRankJSON `json:"programs"`
+	From           time.Time    `json:"from"`
+	To             time.Time    `json:"to"`
+	PeaksOnly      bool         `json:"peaks_only"`
+	SampledSeconds int64        `json:"sampled_seconds"`
+	CPUAvgPercent  float64      `json:"cpu_avg_percent"`
+	Unattributed   cpuShareJSON `json:"unattributed"`
+	// OtherPrograms is busy CPU of programs not listed: cut by --limit, ranked out of a
+	// minute's top 20 or an episode second's top 10, or in a minute not closed yet.
+	OtherPrograms cpuShareJSON      `json:"other_programs"`
+	Programs      []programRankJSON `json:"programs"`
 }
 
-type unattributedJSON struct {
+type cpuShareJSON struct {
 	CPUSeconds    float64 `json:"cpu_seconds"`
 	CPUAvgPercent float64 `json:"cpu_avg_percent"`
 }
@@ -48,6 +51,12 @@ func runTop(ctx context.Context, streams Streams, args []string) (err error) {
 	if err := parseFlags(fs, streams, args); err != nil {
 		return err
 	}
+	if *limit < 1 {
+		fmt.Fprintf(streams.Stderr, "invalid value %d for flag -limit: want 1 or more\n", *limit)
+		fs.SetOutput(streams.Stderr)
+		fs.Usage()
+		return errUsage
+	}
 	now, loc, err := clock()
 	if err != nil {
 		return err
@@ -58,7 +67,8 @@ func runTop(ctx context.Context, streams Streams, args []string) (err error) {
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
 
-	from := now.Add(-since.d)
+	// Programs are stored per minute, so the range starts on a minute in both modes.
+	from := now.Add(-since.d).Truncate(time.Minute)
 	rank := db.RankPrograms
 	if *peaksOnly {
 		rank = db.RankPeakPrograms
@@ -70,13 +80,17 @@ func runTop(ctx context.Context, streams Streams, args []string) (err error) {
 	out := topJSON{
 		From: from.In(loc), To: now.In(loc), PeaksOnly: *peaksOnly, SampledSeconds: r.SampledSeconds,
 		CPUAvgPercent: round2(percentOf(r.BusyTicks, r.CapacityTicks)),
-		Unattributed: unattributedJSON{
-			CPUSeconds:    round2(float64(r.UnattributedTicks) / sampler.TicksPerSecond),
-			CPUAvgPercent: round2(percentOf(r.UnattributedTicks, r.CapacityTicks)),
-		},
-		Programs: []programRankJSON{},
+		Unattributed:  cpuShare(r.UnattributedTicks, r.CapacityTicks),
+		Programs:      []programRankJSON{},
 	}
-	for _, p := range r.Programs[:min(*limit, len(r.Programs))] {
+	listed := r.Programs[:min(*limit, len(r.Programs))]
+	other := r.BusyTicks - r.UnattributedTicks
+	for _, p := range listed {
+		other -= p.CPUTicks
+	}
+	// Per-program shares are rounded per second during peaks, so the remainder can dip below 0.
+	out.OtherPrograms = cpuShare(max(other, 0), r.CapacityTicks)
+	for _, p := range listed {
 		out.Programs = append(out.Programs, programRankJSON{
 			Name: p.Name, ServiceGroup: p.ServiceGroup, Path: p.Path,
 			CPUSeconds:      round2(float64(p.CPUTicks) / sampler.TicksPerSecond),
@@ -94,8 +108,16 @@ func runTop(ctx context.Context, streams Streams, args []string) (err error) {
 	return nil
 }
 
-// printTop writes the ranking as a table, with unattributed CPU as a row of its own among the
-// programs, where its CPU-seconds put it.
+func cpuShare(ticks, capacity int64) cpuShareJSON {
+	return cpuShareJSON{
+		CPUSeconds:    round2(float64(ticks) / sampler.TicksPerSecond),
+		CPUAvgPercent: round2(percentOf(ticks, capacity)),
+	}
+}
+
+// printTop writes the ranking as a table, with unattributed CPU and the programs not listed as
+// rows of their own among the programs, where their CPU-seconds put them. Unattributed CPU is
+// always a row; the programs not listed are one only when they used some CPU.
 func printTop(w io.Writer, out topJSON) {
 	scope := "Top programs"
 	if out.PeaksOnly {
@@ -108,20 +130,30 @@ func printTop(w io.Writer, out topJSON) {
 	}
 	fmt.Fprintf(w, "%s sampled, machine CPU %.1f%% on average\n\n", time.Duration(out.SampledSeconds)*time.Second, out.CPUAvgPercent)
 	rows := [][]string{{"PROGRAM", "CPU-S", "AVG CPU", "MAX CPU", "MAX RAM", "INSTANCES"}}
-	unattributed := []string{"(unattributed)", fmt.Sprintf("%.1f", out.Unattributed.CPUSeconds), fmt.Sprintf("%.1f%%", out.Unattributed.CPUAvgPercent), "", "", ""}
-	placed := false
-	for _, p := range out.Programs {
-		if !placed && out.Unattributed.CPUSeconds > p.CPUSeconds {
-			rows, placed = append(rows, unattributed), true
+	type namedShare struct {
+		name string
+		cpuShareJSON
+	}
+	shares := []namedShare{{"(unattributed)", out.Unattributed}}
+	if other := (namedShare{"(other programs)", out.OtherPrograms}); other.CPUSeconds > out.Unattributed.CPUSeconds {
+		shares = []namedShare{other, shares[0]}
+	} else if other.CPUSeconds > 0 {
+		shares = append(shares, other)
+	}
+	placeShares := func(above float64) {
+		for len(shares) > 0 && shares[0].CPUSeconds > above {
+			rows = append(rows, []string{shares[0].name, fmt.Sprintf("%.1f", shares[0].CPUSeconds), fmt.Sprintf("%.1f%%", shares[0].CPUAvgPercent), "", "", ""})
+			shares = shares[1:]
 		}
+	}
+	for _, p := range out.Programs {
+		placeShares(p.CPUSeconds)
 		rows = append(rows, []string{
 			label(p.Name, p.ServiceGroup), fmt.Sprintf("%.1f", p.CPUSeconds), fmt.Sprintf("%.1f%%", p.CPUAvgPercent),
 			fmt.Sprintf("%.1f%%", p.CPUMaxPercent), formatBytes(p.PrivateMaxBytes), fmt.Sprint(p.InstancesMax),
 		})
 	}
-	if !placed {
-		rows = append(rows, unattributed)
-	}
+	placeShares(-1)
 	printTable(w, rows)
 }
 

@@ -37,6 +37,10 @@ exit: 0
     "cpu_seconds": 6.44,
     "cpu_avg_percent": 2
   },
+  "other_programs": {
+    "cpu_seconds": 16.1,
+    "cpu_avg_percent": 5
+  },
   "programs": [
     {
       "name": "stress.exe",
@@ -88,11 +92,12 @@ exit: 0
 Top programs, 2026-03-02 09:02 to 2026-03-02 09:10 UTC
 1m12s sampled, machine CPU 27.6% on average
 
-PROGRAM         CPU-S  AVG CPU  MAX CPU  MAX RAM  INSTANCES
-chrome.exe       14.4    10.0%    10.0%  700 MiB          2
-stress.exe       11.0     7.6%    75.0%   20 MiB          1
-System            2.9     2.0%     2.0%    1 MiB          1
-(unattributed)    2.9     2.0%
+PROGRAM           CPU-S  AVG CPU  MAX CPU  MAX RAM  INSTANCES
+chrome.exe         14.4    10.0%    10.0%  700 MiB          2
+stress.exe         11.0     7.6%    75.0%   20 MiB          1
+(other programs)    8.6     6.0%
+System              2.9     2.0%     2.0%    1 MiB          1
+(unattributed)      2.9     2.0%
 --- stderr
 
 $ perfwatch top --peaks-only
@@ -133,6 +138,10 @@ exit: 0
   "unattributed": {
     "cpu_seconds": 1.6,
     "cpu_avg_percent": 2
+  },
+  "other_programs": {
+    "cpu_seconds": 4.8,
+    "cpu_avg_percent": 6
   },
   "programs": [
     {
@@ -183,7 +192,7 @@ Usage: perfwatch top [flags]
   -peaks-only
     	rank only the seconds inside peak episodes
   -since value
-    	rank the usage of this much time back from now: 90m, 24h, 7d (default 1d)
+    	rank the usage of this much time back from now: 90m, 24h, 7d (default 24h)
 
 $ perfwatch top --since 3x
 exit: 2
@@ -198,5 +207,79 @@ Usage: perfwatch top [flags]
   -peaks-only
     	rank only the seconds inside peak episodes
   -since value
-    	rank the usage of this much time back from now: 90m, 24h, 7d (default 1d)
+    	rank the usage of this much time back from now: 90m, 24h, 7d (default 24h)
+
+$ perfwatch top --since 300000d
+exit: 2
+--- stdout
+--- stderr
+invalid value "300000d" for flag -since: want a positive whole number of days, as in 7d
+Usage: perfwatch top [flags]
+  -json
+    	print JSON instead of a table
+  -limit int
+    	show at most this many programs (default 20)
+  -peaks-only
+    	rank only the seconds inside peak episodes
+  -since value
+    	rank the usage of this much time back from now: 90m, 24h, 7d (default 24h)
+
+$ perfwatch top --limit 0
+exit: 2
+--- stdout
+--- stderr
+invalid value 0 for flag -limit: want 1 or more
+Usage: perfwatch top [flags]
+  -json
+    	print JSON instead of a table
+  -limit int
+    	show at most this many programs (default 20)
+  -peaks-only
+    	rank only the seconds inside peak episodes
+  -since value
+    	rank the usage of this much time back from now: 90m, 24h, 7d (default 24h)
+
+$ perfwatch top --since 8m --limit 3
+exit: 0
+--- stdout
+Top programs, 2026-03-02 09:02 to 2026-03-02 09:10 UTC
+1m12s sampled, machine CPU 27.6% on average
+
+PROGRAM           CPU-S  AVG CPU  MAX CPU  MAX RAM  INSTANCES
+chrome.exe         14.4    10.0%    10.0%  700 MiB          2
+stress.exe         11.0     7.6%    75.0%   20 MiB          1
+(other programs)    8.6     6.0%
+System              2.9     2.0%     2.0%    1 MiB          1
+(unattributed)      2.9     2.0%
+--- stderr
+
+$ perfwatch top --since 8m --peaks-only --json --limit 1
+exit: 0
+--- stdout
+{
+  "from": "2026-03-02T09:02:00Z",
+  "to": "2026-03-02T09:10:30Z",
+  "peaks_only": true,
+  "sampled_seconds": 13,
+  "cpu_avg_percent": 62.31,
+  "unattributed": {
+    "cpu_seconds": 0.52,
+    "cpu_avg_percent": 2
+  },
+  "other_programs": {
+    "cpu_seconds": 4.68,
+    "cpu_avg_percent": 18
+  },
+  "programs": [
+    {
+      "name": "stress.exe",
+      "cpu_seconds": 11,
+      "cpu_avg_percent": 42.31,
+      "cpu_max_percent": 75,
+      "private_max_bytes": 20971520,
+      "instances_max": 1
+    }
+  ]
+}
+--- stderr
 

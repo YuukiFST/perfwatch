@@ -26,8 +26,8 @@ Under construction: the commands land one pull request at a time.
 
 - Per-process CPU is a share of the whole machine: 100% means every logical CPU was busy.
 - Instances of one program are summed under its name, with the instance count after `x`; `svchost.exe` is split by its `-k` service group.
-- `--since` takes Go durations (`90m`, `24h`) or whole days (`7d`).
-- `top` reads the per-minute top 20s, so a program that ranked out of a minute adds nothing for it; `(unattributed)` is always a row of its own.
+- `--since` takes Go durations (`90m`, `24h`) or whole days (`7d`); `top` starts the range on the minute.
+- `top` reads the per-minute top 20s, so a program that ranked out of a minute adds nothing for it there. `(unattributed)` is always a row of its own, and `(other programs)` is the busy CPU of the programs not listed: cut by `--limit`, ranked out of a minute or a peak second, or in the minute still being collected.
 - `unattributed` is busy CPU that no sampled process accounts for: interrupt and DPC time, processes that started and exited between two samples, and the last partial second of every process that exited.
 
 ## Data
